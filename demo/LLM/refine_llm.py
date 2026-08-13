@@ -36,6 +36,9 @@ def parse_args():
     parser.add_argument("--max_new_tokens", type=int, default=1024)
     parser.add_argument("--llm_batch_size", type=int, default=8,
                         help="Number of prompts to process in one GPU batch.")
+    parser.add_argument("--registry_json", type=str, default=None,
+                        help="Optional character-relationship registry JSON "
+                             "(built by CHARACTER/build_registry.py).")
     return parser.parse_args()
 
 
@@ -59,7 +62,8 @@ def refine_subtitles(
     cache_dir=None,
     max_seq_length=2048,
     max_new_tokens=1024,
-    llm_batch_size=8
+    llm_batch_size=8,
+    registry_json_path=None
 ):
     if cache_dir is None:
         cache_dir = os.path.join(ROOT_DIR, "cache")
@@ -84,6 +88,18 @@ def refine_subtitles(
     print(f"📂 Reading scene captions: {vlm_json_path}")
     with open(vlm_json_path, "r", encoding="utf-8") as f:
         vlm_scenes = json.load(f)
+
+    # ── Optional character registry ──────────────────────────────────────────
+    registry_block = ""
+    if registry_json_path and os.path.exists(registry_json_path):
+        import sys
+        if ROOT_DIR not in sys.path:
+            sys.path.insert(0, ROOT_DIR)  # ROOT_DIR = demo/, chua package CHARACTER
+        from CHARACTER.registry_prompt import render_registry_block
+        from CHARACTER.registry_schema import load_registry
+        registry_block = render_registry_block(load_registry(registry_json_path))
+        if registry_block:
+            print(f"📇 Character registry loaded: {registry_json_path}", flush=True)
 
     scenes_data = []
     for idx, sc in enumerate(vlm_scenes):
@@ -145,6 +161,13 @@ def refine_subtitles(
         "    Keep meaning and structure unchanged.\n"
         "    Output only the corrected Vietnamese translation, line by line.   "
     )
+    if registry_block:
+        base_system += (
+            "\n    A <Character Registry> section lists the film's characters and "
+            "DIRECTED relations with the Vietnamese pronouns each speaker should "
+            "use. When a dialogue line matches a listed speaker->listener pair, "
+            "prefer the registry's pronouns over the rough translation's."
+        )
 
     # ── Pre-tokenize all prompts ─────────────────────────────────────────────
     print("Tokenizing all prompts...")
@@ -152,6 +175,8 @@ def refine_subtitles(
     for item in prompts:
         full_sys = (f"{base_system}\n"
                     f"    <Scene Context>\n    {item['context']}\n    </Scene Context>")
+        if registry_block:
+            full_sys += f"\n{registry_block}"
         user_msg = (f"<English Dialogue>\n{item['raw_en']}\n</English Dialogue>\n"
                     f"<Rough Vietnamese Translation>\n{item['vinai_sub']}\n"
                     f"</Rough Vietnamese Translation>")
@@ -289,7 +314,8 @@ def main():
         cache_dir=args.cache_dir,
         max_seq_length=args.max_seq_length,
         max_new_tokens=args.max_new_tokens,
-        llm_batch_size=args.llm_batch_size
+        llm_batch_size=args.llm_batch_size,
+        registry_json_path=args.registry_json,
     )
 
 
