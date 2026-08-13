@@ -19,6 +19,14 @@ PRONOUN_TERMS: frozenset[str] = frozenset({
     "nó", "hắn", "y", "gã", "ả", "họ", "chúng", "chúng nó", "bọn nó", "tụi nó",
     "anh ấy", "cô ấy", "chị ấy", "ông ấy", "bà ấy", "em ấy",
     "chú ấy", "bác ấy", "cậu ấy",
+    # bo sung tu calibration Task 3 (term gold xuat hien >50 lan trong
+    # data/en-vi-speaker-with-time-pronouns ma lexicon ban dau thieu)
+    "ai", "người", "anh ta", "mọi người", "sếp", "chúa", "cô ta", "ông ta",
+    "cậu ta", "con bé", "bọn", "các", "thằng bé", "bố mẹ", "vợ", "bé",
+    "con trai", "kẻ", "cả", "nhau", "đứa", "cưng", "tên", "thằng", "đồ",
+    "nhóc", "lũ", "các cậu", "lão", "em bé",
+    "chồng", "cô bé", "cậu bé", "bọn con", "ngươi", "mấy người",
+    "các người", "anh chàng", "thằng nhóc",
 })
 
 # Match dai-nhat-truoc; \w cua Python mac dinh Unicode-aware nen boundary
