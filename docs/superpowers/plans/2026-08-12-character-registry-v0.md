@@ -1176,7 +1176,7 @@ git commit -m "feat: registry extraction prompt, transcript chunking, and refine
 
 **Lý do dùng Gemma BASE (không dùng adapter refine):** adapter `thevan2404/best_gemma_scene_context` được finetune cho task sửa phụ đề line-by-line — bắt nó sinh JSON graph là off-distribution. Base model instruct làm task extraction tổng quát tốt hơn, và không tốn thêm VRAM (cùng base 4-bit).
 
-- [ ] **Step 1: Viết failing test (orchestrator với generate_fn giả)**
+- [x] **Step 1: Viết failing test (orchestrator với generate_fn giả)**
 
 `tests/test_build_registry.py`:
 
@@ -1229,7 +1229,7 @@ def test_extract_registry_empty_transcript():
     assert reg.characters == () and reg.relations == ()
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận FAIL**
+- [x] **Step 2: Chạy test, xác nhận FAIL**
 
 ```bash
 python -m pytest tests/test_build_registry.py -v
@@ -1237,7 +1237,7 @@ python -m pytest tests/test_build_registry.py -v
 
 Expected: FAIL với `ImportError`
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `demo/CHARACTER/build_registry.py`:
 
@@ -1400,7 +1400,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Chạy test local, xác nhận PASS**
+- [x] **Step 4: Chạy test local, xác nhận PASS**
 
 ```bash
 python -m pytest tests/test_build_registry.py -v
@@ -1408,7 +1408,7 @@ python -m pytest tests/test_build_registry.py -v
 
 Expected: 3 passed (torch/unsloth chỉ import bên trong `_make_generate_fn` nên test local không cần GPU)
 
-- [ ] **Step 5: Smoke test trên SERVER (cần GPU + HF_TOKEN)**
+- [x] **Step 5: Smoke test trên SERVER (cần GPU + HF_TOKEN)**
 
 ```bash
 python demo/CHARACTER/build_registry.py --en_srt "demo/output/test.(Tiếng Anh).srt" --vlm_json "demo/output/test.captions.json" --output_json "demo/output/test.registry.json"
@@ -1419,7 +1419,7 @@ Kiểm tra `demo/output/test.registry.json`:
 2. Mọi relation có `vi_self`/`vi_listener` là từ xưng hô tiếng Việt và `evidence_lines` nằm trong phạm vi transcript.
 3. **Case bà–cháu:** phim test có nhân vật Meemaw (bà) — registry phải có edge `grandchild->grandmother` với "cháu"/"bà" (đây chính là lỗi mẹ/con đã ghi nhận trong survey). Nếu sai → chỉnh EXTRACTION_SYSTEM (thêm hint từ caption) rồi chạy lại, KHÔNG hạ điều kiện validate.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add demo/CHARACTER/build_registry.py tests/test_build_registry.py
@@ -1437,7 +1437,7 @@ git commit -m "feat: GPU registry builder with injectable generate_fn and atomic
 - Consumes: `load_registry` (Task 4), `render_registry_block` (Task 5).
 - Produces: `refine_subtitles(..., registry_json_path: str | None = None)` + CLI arg `--registry_json`. Task 8 (run_pipeline) truyền param này.
 
-- [ ] **Step 1: Thêm CLI arg**
+- [x] **Step 1: Thêm CLI arg**
 
 Trong `parse_args()` của `demo/LLM/refine_llm.py`, thêm sau `--llm_batch_size`:
 
@@ -1447,7 +1447,7 @@ Trong `parse_args()` của `demo/LLM/refine_llm.py`, thêm sau `--llm_batch_size
                              "(built by CHARACTER/build_registry.py).")
 ```
 
-- [ ] **Step 2: Thêm param vào signature + load registry**
+- [x] **Step 2: Thêm param vào signature + load registry**
 
 Sửa signature `refine_subtitles(...)`: thêm param cuối `registry_json_path=None`.
 
@@ -1469,7 +1469,7 @@ Ngay sau block đọc `vlm_scenes` (sau dòng `vlm_scenes = json.load(f)`), thê
 
 Lưu ý: `ROOT_DIR` trong refine_llm.py đã trỏ đến `demo/` (dòng 16), nên chỉ cần insert `ROOT_DIR` vào sys.path là import được package `CHARACTER`.
 
-- [ ] **Step 3: Nối block vào system prompt**
+- [x] **Step 3: Nối block vào system prompt**
 
 Sửa `base_system` (dòng ~132): thêm ngay trước chuỗi đóng, sau câu "Output only the corrected Vietnamese translation, line by line.":
 
@@ -1492,7 +1492,7 @@ Sửa chỗ build `full_sys` (dòng ~151):
             full_sys += f"\n{registry_block}"
 ```
 
-- [ ] **Step 4: Nối param từ main()**
+- [x] **Step 4: Nối param từ main()**
 
 Trong `main()`, thêm vào call `refine_subtitles(...)`:
 
@@ -1500,7 +1500,7 @@ Trong `main()`, thêm vào call `refine_subtitles(...)`:
         registry_json_path=args.registry_json,
 ```
 
-- [ ] **Step 5: Verify nhanh (local, không GPU): module compile + block rendering đúng vị trí**
+- [x] **Step 5: Verify nhanh (local, không GPU): module compile + block rendering đúng vị trí**
 
 ```bash
 python -c "
@@ -1516,7 +1516,7 @@ print('OK')
 
 Expected: `OK` (không import module vì unsloth không có trên máy local)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add demo/LLM/refine_llm.py
@@ -1534,7 +1534,7 @@ git commit -m "feat: opt-in character-registry block in Gemma refine prompt"
 - Consumes: `build_registry.run(...)` (Task 6), `refine_subtitles(..., registry_json_path=...)` (Task 7), eval CLI (Task 3).
 - Produces: `run_pipeline.py --use_registry` tạo `{base}.registry.json` và refined SRT có registry; mặc định (không flag) hành vi y hệt cũ.
 
-- [ ] **Step 1: Thêm flag + đường dẫn**
+- [x] **Step 1: Thêm flag + đường dẫn**
 
 Trong `parse_args()` thêm:
 
@@ -1550,7 +1550,7 @@ Trong `main()`, sau `output_srt_path = ...` (dòng ~249) thêm:
     registry_json_path = os.path.join(args.output_dir, f"{base_name}.registry.json")
 ```
 
-- [ ] **Step 2: Thêm step5b**
+- [x] **Step 2: Thêm step5b**
 
 Thêm hàm mới sau `step5_run_nmt` (sau dòng 201), cùng pattern skip/unload với các step khác:
 
@@ -1579,7 +1579,7 @@ def step5b_build_registry(english_srt_path, vlm_json_path, registry_json_path, c
     return registry_json_path
 ```
 
-- [ ] **Step 3: Sửa step6 nhận registry**
+- [x] **Step 3: Sửa step6 nhận registry**
 
 Sửa signature `step6_run_llm(...)`: thêm param cuối `registry_json_path=None`.
 
@@ -1602,7 +1602,7 @@ Trong body, sửa call `refine_llm.refine_subtitles(...)`:
 
 (`max_seq_length` tăng lên 4096 khi có registry vì system prompt dài thêm ~500–800 token.)
 
-- [ ] **Step 4: Gọi step5b trong main()**
+- [x] **Step 4: Gọi step5b trong main()**
 
 Trong `main()`, giữa Step 5 và Step 6 (sau dòng `durations["Step 5: ..."]`), thêm:
 
@@ -1623,7 +1623,7 @@ Sửa call step6:
                   registry_json_path=registry_json_path if args.use_registry else None)
 ```
 
-- [ ] **Step 5: Verify cú pháp local**
+- [x] **Step 5: Verify cú pháp local**
 
 ```bash
 python -c "
@@ -1637,7 +1637,7 @@ print('OK')
 
 Expected: `OK`
 
-- [ ] **Step 6: Chạy toàn bộ test suite local lần cuối**
+- [x] **Step 6: Chạy toàn bộ test suite local lần cuối**
 
 ```bash
 python -m pytest tests/ -v
