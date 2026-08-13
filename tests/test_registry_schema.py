@@ -1,0 +1,98 @@
+from CHARACTER.registry_schema import (
+    Registry,
+    merge_registries,
+    parse_registry,
+    registry_to_json,
+)
+
+RAW = {
+    "characters": [
+        {"id": "C1", "names": ["Meemaw", "Grandma"], "gender": "female",
+         "age_range": "elderly", "evidence_lines": [35]},
+        {"id": "C2", "names": ["Sheldon"], "gender": "male",
+         "age_range": "child", "evidence_lines": [1]},
+    ],
+    "relations": [
+        {"from_id": "C2", "to_id": "C1", "rel_type": "grandchild->grandmother",
+         "vi_self": "cháu", "vi_listener": "bà", "confidence": "high",
+         "evidence_lines": [35]},
+        {"from_id": "C1", "to_id": "C2", "rel_type": "grandmother->grandchild",
+         "vi_self": "bà", "vi_listener": "cháu", "confidence": "high",
+         "evidence_lines": [35, 40]},
+    ],
+}
+
+
+def test_parse_valid_registry():
+    reg = parse_registry(RAW, n_lines=100)
+    assert len(reg.characters) == 2
+    assert len(reg.relations) == 2
+    assert reg.relations[0].vi_self == "cháu"
+
+
+def test_parse_drops_relation_without_valid_evidence():
+    raw = {
+        "characters": RAW["characters"],
+        "relations": [
+            {"from_id": "C2", "to_id": "C1", "rel_type": "x",
+             "vi_self": "cháu", "vi_listener": "bà", "confidence": "high",
+             "evidence_lines": [999]},  # ngoai pham vi transcript
+        ],
+    }
+    assert parse_registry(raw, n_lines=100).relations == ()
+
+
+def test_parse_drops_unknown_ids_and_self_loops():
+    raw = {
+        "characters": [RAW["characters"][0]],
+        "relations": [
+            {"from_id": "C9", "to_id": "C1", "rel_type": "x",
+             "vi_self": "a", "vi_listener": "b", "confidence": "high",
+             "evidence_lines": [1]},
+            {"from_id": "C1", "to_id": "C1", "rel_type": "x",
+             "vi_self": "a", "vi_listener": "b", "confidence": "high",
+             "evidence_lines": [1]},
+        ],
+    }
+    assert parse_registry(raw, n_lines=100).relations == ()
+
+
+def test_merge_dedups_characters_by_shared_alias():
+    reg1 = parse_registry(RAW, n_lines=100)
+    raw2 = {
+        "characters": [
+            # cung nhan vat, chunk khac dat id khac + alias trung "Grandma"
+            {"id": "C1", "names": ["Grandma", "Constance"], "gender": "female",
+             "age_range": "elderly", "evidence_lines": [210]},
+        ],
+        "relations": [],
+    }
+    reg2 = parse_registry(raw2, n_lines=300)
+    merged = merge_registries([reg1, reg2])
+    assert len(merged.characters) == 2  # Meemaw/Grandma/Constance gop lam 1
+    names = {n for c in merged.characters for n in c.names}
+    assert "Constance" in names and "Sheldon" in names
+
+
+def test_merge_keeps_highest_confidence_relation():
+    reg1 = parse_registry(RAW, n_lines=100)
+    raw2 = {
+        "characters": RAW["characters"],
+        "relations": [
+            {"from_id": "C2", "to_id": "C1", "rel_type": "grandchild->grandmother",
+             "vi_self": "em", "vi_listener": "chị", "confidence": "low",
+             "evidence_lines": [50]},
+        ],
+    }
+    merged = merge_registries([reg1, parse_registry(raw2, n_lines=100)])
+    rel = next(r for r in merged.relations
+               if r.rel_type == "grandchild->grandmother")
+    assert rel.vi_self == "cháu"  # high thang low
+    assert 50 in rel.evidence_lines  # evidence van duoc gop
+
+
+def test_json_roundtrip():
+    reg = parse_registry(RAW, n_lines=100)
+    raw = registry_to_json(reg)
+    reg2 = parse_registry(raw, n_lines=100)
+    assert reg == reg2
