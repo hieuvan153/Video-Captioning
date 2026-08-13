@@ -5,6 +5,10 @@
 !/tests/
 !/docs/
 
+# Secrets — never commit
+.env
+.env.*
+
 # Generated / heavy content
 __pycache__/
 unsloth_compiled_cache/
