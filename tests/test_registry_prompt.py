@@ -98,3 +98,29 @@ def test_render_context_filters_low_confidence():
 
 def test_render_context_empty_registry_returns_empty_string():
     assert render_registry_context(Registry()) == ""
+
+
+def test_render_context_skips_neutral_toi_ban_edges():
+    # Edge "tôi"/"bạn" la mac dinh trung tinh cua NMT — khong mang thong tin,
+    # chi day model paraphrase lech (quan sat tren movie_008), nen bo qua.
+    chars = (
+        Character("C1", ("Glenn",), "male", "adult", (1,)),
+        Character("C2", ("Kitty",), "female", "adult", (2,)),
+        Character("C3", ("Sal",), "male", "adult", (3,)),
+    )
+    rels = (
+        Relation("C1", "C2", "coworker", "tôi", "bạn", "high", (1,)),
+        Relation("C3", "C2", "lover", "anh", "em", "high", (3,)),
+    )
+    ctx = render_registry_context(Registry(chars, rels))
+    assert "Glenn" not in ctx          # cap chi co edge trung tinh -> bien mat
+    assert 'Sal calls Kitty "em"' in ctx
+
+
+def test_render_context_all_neutral_returns_empty():
+    chars = (
+        Character("C1", ("A",), "male", "adult", (1,)),
+        Character("C2", ("B",), "female", "adult", (2,)),
+    )
+    rels = (Relation("C1", "C2", "coworker", "tôi", "bạn", "high", (1,)),)
+    assert render_registry_context(Registry(chars, rels)) == ""

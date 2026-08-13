@@ -118,6 +118,10 @@ def render_registry_context(
     for r in reg.relations:
         if CONFIDENCE_LEVELS[r.confidence] < min_rank:
             continue
+        # "tôi"/"bạn" la cap trung tinh mac dinh cua NMT: khong mang thong tin
+        # xung ho, chi lam prompt dai va day model paraphrase lech.
+        if r.vi_self == "tôi" and r.vi_listener == "bạn":
+            continue
         pairs.setdefault(tuple(sorted((r.from_id, r.to_id))), []).append(r)
     if not pairs:
         return ""
