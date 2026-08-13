@@ -40,6 +40,9 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42, help="Random seed for deterministic inference")
     parser.add_argument("--vlm_fps", type=float, default=1, help="Frame sampling rate for VideoLLaMA3")
     parser.add_argument("--llm_batch_size", type=int, default=10, help="Batch size for Gemma3 subtitle refinement")
+    parser.add_argument("--use_registry", action="store_true",
+                        help="Build a character-relationship registry (step 5b) "
+                             "and inject it into the Gemma refinement prompt.")
     return parser.parse_args()
 
 def free_gpu_memory():
@@ -200,7 +203,30 @@ def step5_run_nmt(english_srt_path, rough_srt_path, cache_dir):
     
     return rough_srt_path
 
-def step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_path, cache_dir, llm_batch_size):
+def step5b_build_registry(english_srt_path, vlm_json_path, registry_json_path, cache_dir):
+    print("\n=== STEP 5b: Building Character Registry (Gemma base) ===", flush=True)
+    if os.path.exists(registry_json_path):
+        print(f"Registry already exists: {registry_json_path}. Skipping.", flush=True)
+        return registry_json_path
+
+    sys.path.append(ROOT_DIR)
+    from CHARACTER import build_registry
+
+    build_registry.run(
+        en_srt_path=english_srt_path,
+        vlm_json_path=vlm_json_path,
+        output_json_path=registry_json_path,
+        cache_dir=cache_dir,
+    )
+
+    print("Unloading Registry Model...", flush=True)
+    for mod in ("CHARACTER.build_registry",):
+        if mod in sys.modules:
+            del sys.modules[mod]
+    free_gpu_memory()
+    return registry_json_path
+
+def step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_path, cache_dir, llm_batch_size, registry_json_path=None):
     print("\n=== STEP 6: Running LLM Refinement (Gemma3) ===", flush=True)
     if os.path.exists(output_srt_path):
         print(f"Refined Vietnamese SRT already exists: {output_srt_path}. Skipping LLM.", flush=True)
@@ -216,9 +242,10 @@ def step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_pa
         output_srt_path=output_srt_path,
         adapter_model_name="thevan2404/best_gemma_scene_context",
         cache_dir=cache_dir,
-        max_seq_length=2048,
+        max_seq_length=4096 if registry_json_path else 2048,
         max_new_tokens=1024,
-        llm_batch_size=llm_batch_size
+        llm_batch_size=llm_batch_size,
+        registry_json_path=registry_json_path,
     )
 
     # Unload Gemma3 model from VRAM
@@ -247,6 +274,7 @@ def main():
     vlm_json_path = os.path.join(args.output_dir, f"{base_name}.captions.json")
     rough_srt_path = os.path.join(args.output_dir, f"{base_name}.(Tiếng Việt_dich_tho).srt")
     output_srt_path = os.path.join(args.output_dir, f"{base_name}.(Tiếng Việt_tinh_chinh).srt")
+    registry_json_path = os.path.join(args.output_dir, f"{base_name}.registry.json")
 
     t_start = time.time()
     durations = {}
@@ -276,9 +304,17 @@ def main():
     step5_run_nmt(english_srt_path, rough_srt_path, args.cache_dir)
     durations["Step 5: NMT Translation (MBart)"] = time.time() - t0
 
+    # Step 5b: Character Registry (optional)
+    if args.use_registry:
+        t0 = time.time()
+        step5b_build_registry(english_srt_path, vlm_json_path,
+                              registry_json_path, args.cache_dir)
+        durations["Step 5b: Character Registry"] = time.time() - t0
+
     # Step 6: Run LLM refinement
     t0 = time.time()
-    step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_path, args.cache_dir, args.llm_batch_size)
+    step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_path, args.cache_dir, args.llm_batch_size,
+                  registry_json_path=registry_json_path if args.use_registry else None)
     durations["Step 6: LLM Refinement (Gemma3)"] = time.time() - t0
 
     total_time = time.time() - t_start
