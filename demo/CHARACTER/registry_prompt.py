@@ -21,7 +21,8 @@ EXTRACTION_SYSTEM = (
     "- Only include characters and relations supported by evidence: cite the "
     "dialogue line numbers in evidence_lines. If unsure, use confidence \"low\" "
     "or omit the relation entirely.\n"
-    "- Output STRICT JSON only. No markdown fences, no commentary."
+    "- Output STRICT JSON only, compact (no pretty-printing). No markdown "
+    "fences, no commentary."
 )
 
 _SCHEMA_EXAMPLE = {
@@ -83,7 +84,7 @@ def build_extraction_prompt(
         "Return JSON with EXACTLY this schema (keys: characters[], relations[]; "
         "relation keys: from_id, to_id, rel_type, vi_self, vi_listener, "
         "confidence, evidence_lines):\n"
-        f"{json.dumps(_SCHEMA_EXAMPLE, ensure_ascii=False, indent=1)}"
+        f"{json.dumps(_SCHEMA_EXAMPLE, ensure_ascii=False, separators=(',', ':'))}"
     )
     return EXTRACTION_SYSTEM, user
 
