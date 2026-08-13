@@ -1430,6 +1430,19 @@ git commit -m "feat: GPU registry builder with injectable generate_fn and atomic
 
 ### Task 7: Tiêm registry vào prompt refine (refine_llm.py)
 
+> **⚠️ THAY ĐỔI THIẾT KẾ SAU KHI CHẠY THỰC TẾ (2026-08-13):** Cách tiêm block
+> `<Character Registry>` sau `</Scene Context>` như mô tả dưới đây làm adapter
+> **suy biến hoàn toàn** (mọi dòng output thành 1 chuỗi rác lặp lại, vd
+> `-  -Tốt.`). Đã cô lập bằng thí nghiệm A/B: thủ phạm là block XML ngoài
+> Scene Context (prompt shape ngoài phân phối train của adapter), KHÔNG phải
+> `max_seq_length` 2048→4096. Fix (commit `fix: inject registry as
+> caption-style relationship line inside scene context`): render registry bằng
+> `render_registry_context()` thành 1 dòng `Relationship (whole-film analysis):
+> ...` nối VÀO TRONG `<Scene Context>`, đúng style caption VLM
+> (`3. Relationship: [A & B] - [Type]`) mà adapter đã được train.
+> `base_system` giữ nguyên 100% so với baseline. Hàm `render_registry_block()`
+> vẫn tồn tại (đã test) nhưng không còn được refine_llm dùng.
+
 **Files:**
 - Modify: `demo/LLM/refine_llm.py` (args ~dòng 26–37, signature `refine_subtitles` ~dòng 51–61, `base_system` ~dòng 132–145, build prompt ~dòng 147–166, `main()` ~dòng 279)
 
