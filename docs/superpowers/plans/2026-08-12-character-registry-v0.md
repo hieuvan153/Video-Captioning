@@ -1658,7 +1658,7 @@ python -m pytest tests/ -v
 
 Expected: tất cả pass (≥20 test)
 
-- [ ] **Step 7: E2E A/B trên SERVER**
+- [x] **Step 7: E2E A/B trên SERVER** *(đạt sau khi redesign injection — xem ghi chú đầu Task 7; diff xác nhận toàn bộ thoại Meemaw–Sheldon chuyển mẹ/con → bà/cháu, 49/49 dòng hợp lệ)*
 
 Baseline đã có sẵn (`demo/output/test.(Tiếng Việt_tinh_chinh).srt`). Chạy nhánh registry với output riêng — copy output dir hoặc rename file cũ trước:
 
