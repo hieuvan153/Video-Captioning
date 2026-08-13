@@ -103,13 +103,13 @@ git commit -m "fix: read HF token from env and add missing __main__ guard in ref
 **Interfaces:**
 - Produces: `extract_pronouns(text: str) -> list[str]`; `parse_gold_pronouns(record: dict) -> list[str]`; `corpus_pronoun_f1(pairs: list[tuple[list[str], list[str]]]) -> PronounScores` (dataclass có `.precision .recall .f1 .tp .fp .fn`). Task 3 và Task 8 dùng đúng các tên này.
 
-- [ ] **Step 1: Cài dependency test (local)**
+- [x] **Step 1: Cài dependency test (local)**
 
 ```bash
 pip install pytest sacrebleu
 ```
 
-- [ ] **Step 2: Viết conftest cho pytest tìm được package trong demo/**
+- [x] **Step 2: Viết conftest cho pytest tìm được package trong demo/**
 
 `tests/conftest.py`:
 
@@ -120,7 +120,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "demo"))
 ```
 
-- [ ] **Step 3: Viết failing test**
+- [x] **Step 3: Viết failing test**
 
 `tests/test_pronoun_metrics.py`:
 
@@ -163,7 +163,7 @@ def test_corpus_f1_partial_multiset():
     assert scores.tp == 2 and scores.fn == 1 and scores.fp == 0
 ```
 
-- [ ] **Step 4: Chạy test, xác nhận FAIL**
+- [x] **Step 4: Chạy test, xác nhận FAIL**
 
 ```bash
 python -m pytest tests/test_pronoun_metrics.py -v
@@ -171,7 +171,7 @@ python -m pytest tests/test_pronoun_metrics.py -v
 
 Expected: FAIL / ERROR với `ModuleNotFoundError: No module named 'EVAL'`
 
-- [ ] **Step 5: Implement lexicon**
+- [x] **Step 5: Implement lexicon**
 
 `demo/EVAL/pronoun_lexicon.py`:
 
@@ -223,7 +223,7 @@ def parse_gold_pronouns(record: dict) -> list[str]:
     return terms
 ```
 
-- [ ] **Step 6: Implement metric**
+- [x] **Step 6: Implement metric**
 
 `demo/EVAL/pronoun_f1.py`:
 
@@ -262,7 +262,7 @@ def corpus_pronoun_f1(pairs: list[tuple[list[str], list[str]]]) -> PronounScores
 
 Tạo thêm `demo/EVAL/__init__.py` rỗng.
 
-- [ ] **Step 7: Chạy test, xác nhận PASS**
+- [x] **Step 7: Chạy test, xác nhận PASS**
 
 ```bash
 python -m pytest tests/test_pronoun_metrics.py -v
@@ -270,7 +270,7 @@ python -m pytest tests/test_pronoun_metrics.py -v
 
 Expected: 6 passed
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add demo/EVAL/ tests/
@@ -289,7 +289,7 @@ git commit -m "feat: Vietnamese pronoun lexicon and micro-F1 metric for eval har
 - Consumes: `extract_pronouns`, `parse_gold_pronouns`, `corpus_pronoun_f1` (Task 2).
 - Produces: CLI `python demo/EVAL/run_eval.py` với 2 mode; hàm `evaluate_lines(hyps: list[str], refs: list[str], gold_pronouns: list[list[str]] | None) -> dict` (keys: `"bleu"`, `"chrf"`, `"pronoun_precision"`, `"pronoun_recall"`, `"pronoun_f1"`, `"n_lines"`). Task 8 gọi CLI này.
 
-- [ ] **Step 1: Viết failing test**
+- [x] **Step 1: Viết failing test**
 
 `tests/test_run_eval.py`:
 
@@ -344,7 +344,7 @@ def test_align_by_time_merges_overlapping_hyp_lines():
     ]
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận FAIL**
+- [x] **Step 2: Chạy test, xác nhận FAIL**
 
 ```bash
 python -m pytest tests/test_run_eval.py -v
@@ -352,7 +352,7 @@ python -m pytest tests/test_run_eval.py -v
 
 Expected: FAIL với `ModuleNotFoundError` hoặc `ImportError`
 
-- [ ] **Step 3: Implement CLI**
+- [x] **Step 3: Implement CLI**
 
 `demo/EVAL/run_eval.py`:
 
@@ -503,7 +503,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Chạy test, xác nhận PASS**
+- [x] **Step 4: Chạy test, xác nhận PASS**
 
 ```bash
 python -m pytest tests/test_run_eval.py -v
@@ -511,7 +511,7 @@ python -m pytest tests/test_run_eval.py -v
 
 Expected: 4 passed
 
-- [ ] **Step 5: Calibration trên dataset thật (local, không cần GPU)**
+- [x] **Step 5: Calibration trên dataset thật (local, không cần GPU)**
 
 ```bash
 mkdir -p docs/eval
@@ -523,7 +523,7 @@ Kiểm tra output:
 2. `lexicon_missing_terms` — nếu có term gold xuất hiện >50 lần mà lexicon thiếu → thêm vào `PRONOUN_TERMS`, chạy lại đến khi các term tần suất cao được cover (đây là bước calibrate lexicon, chấp nhận đuôi dài term hiếm).
 3. Ghi lại `pronoun_f1` của `vietsub_raw` — đây là **baseline trước-refine** để đối chiếu xu hướng với số liệu paper (E5 full-pipeline = 0.5806; số ở đây đo trên tập khác nên chỉ cần cùng bậc, không cần khớp).
 
-- [ ] **Step 6: Commit (kèm report baseline)**
+- [x] **Step 6: Commit (kèm report baseline)**
 
 ```bash
 git add demo/EVAL/run_eval.py tests/test_run_eval.py demo/EVAL/pronoun_lexicon.py docs/eval/
@@ -549,7 +549,7 @@ git commit -m "feat: eval CLI with BLEU/chrF/PronounF1 and dataset calibration b
   - `registry_to_json(reg: Registry) -> dict` / `load_registry(path: str) -> Registry`
   - `CONFIDENCE_LEVELS: dict[str, int]` (`{"high": 2, "medium": 1, "low": 0}`)
 
-- [ ] **Step 1: Viết failing test**
+- [x] **Step 1: Viết failing test**
 
 `tests/test_registry_schema.py`:
 
@@ -654,7 +654,7 @@ def test_json_roundtrip():
     assert reg == reg2
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận FAIL**
+- [x] **Step 2: Chạy test, xác nhận FAIL**
 
 ```bash
 python -m pytest tests/test_registry_schema.py -v
@@ -662,7 +662,7 @@ python -m pytest tests/test_registry_schema.py -v
 
 Expected: FAIL với `ModuleNotFoundError: No module named 'CHARACTER'`
 
-- [ ] **Step 3: Implement schema**
+- [x] **Step 3: Implement schema**
 
 `demo/CHARACTER/registry_schema.py`:
 
@@ -880,7 +880,7 @@ def load_registry(path: str) -> Registry:
 
 Tạo thêm `demo/CHARACTER/__init__.py` rỗng.
 
-- [ ] **Step 4: Chạy test, xác nhận PASS**
+- [x] **Step 4: Chạy test, xác nhận PASS**
 
 ```bash
 python -m pytest tests/test_registry_schema.py -v
@@ -888,7 +888,7 @@ python -m pytest tests/test_registry_schema.py -v
 
 Expected: 6 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add demo/CHARACTER/ tests/test_registry_schema.py
@@ -913,7 +913,7 @@ git commit -m "feat: directed character-relationship registry schema with eviden
   - `parse_llm_json(text: str) -> dict | None`
   - `render_registry_block(reg: Registry, max_relations: int = 24, min_confidence: str = "medium") -> str`
 
-- [ ] **Step 1: Viết failing test**
+- [x] **Step 1: Viết failing test**
 
 `tests/test_registry_prompt.py`:
 
@@ -999,7 +999,7 @@ def test_render_block_empty_registry_returns_empty_string():
     assert render_registry_block(Registry()) == ""
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận FAIL**
+- [x] **Step 2: Chạy test, xác nhận FAIL**
 
 ```bash
 python -m pytest tests/test_registry_prompt.py -v
@@ -1007,7 +1007,7 @@ python -m pytest tests/test_registry_prompt.py -v
 
 Expected: FAIL với `ImportError`
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `demo/CHARACTER/registry_prompt.py`:
 
@@ -1144,7 +1144,7 @@ def render_registry_block(
     return "\n".join(lines)
 ```
 
-- [ ] **Step 4: Chạy test, xác nhận PASS**
+- [x] **Step 4: Chạy test, xác nhận PASS**
 
 ```bash
 python -m pytest tests/test_registry_prompt.py -v
@@ -1152,7 +1152,7 @@ python -m pytest tests/test_registry_prompt.py -v
 
 Expected: 8 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add demo/CHARACTER/registry_prompt.py tests/test_registry_prompt.py
