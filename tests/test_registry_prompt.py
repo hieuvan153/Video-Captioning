@@ -5,6 +5,7 @@ from CHARACTER.registry_prompt import (
     number_lines,
     parse_llm_json,
     render_registry_block,
+    render_registry_context,
 )
 from CHARACTER.registry_schema import Character, Registry, Relation
 
@@ -77,3 +78,23 @@ def test_render_block_filters_by_confidence():
 
 def test_render_block_empty_registry_returns_empty_string():
     assert render_registry_block(Registry()) == ""
+
+
+def test_render_context_caption_style_single_line():
+    # Adapter duoc train voi Scene Context dang "3. Relationship: [A & B] - [Type]"
+    # => renderer phai ra 1 dong prose cung style, KHONG dung tag XML.
+    ctx = render_registry_context(_sample_registry())
+    assert ctx.startswith("Relationship")
+    assert "<" not in ctx and "\n" not in ctx
+    assert "Meemaw & Sheldon" in ctx or "Sheldon & Meemaw" in ctx
+    assert 'self "cháu"' in ctx  # high-confidence edge Sheldon->Meemaw
+
+
+def test_render_context_filters_low_confidence():
+    ctx = render_registry_context(_sample_registry(), min_confidence="medium")
+    # edge Meemaw->Sheldon la "low" => khong duoc xuat hien
+    assert 'Meemaw calls Sheldon' not in ctx
+
+
+def test_render_context_empty_registry_returns_empty_string():
+    assert render_registry_context(Registry()) == ""

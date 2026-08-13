@@ -100,6 +100,43 @@ def parse_llm_json(text: str) -> dict | None:
     return obj if isinstance(obj, dict) else None
 
 
+def render_registry_context(
+    reg: Registry, max_pairs: int = 6, min_confidence: str = "medium"
+) -> str:
+    """Render registry thanh 1 dong 'Relationship: ...' de noi VAO Scene Context.
+
+    Adapter refine duoc train voi caption VLM co muc
+    "3. Relationship: [A & B] - [Type]" ben trong <Scene Context>; block XML
+    dat ngoai section nay lam adapter suy bien (output lap vo nghia), nen
+    registry phai duoc dien dat dung style caption, 1 dong prose, khong tag.
+    """
+    if not reg.characters:
+        return ""
+    min_rank = CONFIDENCE_LEVELS[min_confidence]
+    name_of = {c.id: c.names[0] for c in reg.characters}
+    pairs: dict[tuple[str, str], list] = {}
+    for r in reg.relations:
+        if CONFIDENCE_LEVELS[r.confidence] < min_rank:
+            continue
+        pairs.setdefault(tuple(sorted((r.from_id, r.to_id))), []).append(r)
+    if not pairs:
+        return ""
+
+    def best_rank(rels) -> int:
+        return max(CONFIDENCE_LEVELS[r.confidence] for r in rels)
+
+    entries = []
+    for key, rels in sorted(pairs.items(), key=lambda kv: -best_rank(kv[1]))[:max_pairs]:
+        a, b = key
+        hints = "; ".join(
+            f'{name_of[r.from_id]} calls {name_of[r.to_id]} "{r.vi_listener}" '
+            f'and self "{r.vi_self}"'
+            for r in rels
+        )
+        entries.append(f"{name_of[a]} & {name_of[b]} - {rels[0].rel_type} ({hints})")
+    return "Relationship (whole-film analysis): " + " | ".join(entries)
+
+
 def render_registry_block(
     reg: Registry, max_relations: int = 24, min_confidence: str = "medium"
 ) -> str:

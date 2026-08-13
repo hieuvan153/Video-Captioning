@@ -90,15 +90,17 @@ def refine_subtitles(
         vlm_scenes = json.load(f)
 
     # ── Optional character registry ──────────────────────────────────────────
-    registry_block = ""
+    # Tiem VAO trong <Scene Context> theo dung style caption VLM ("3. Relationship:
+    # ..."); block/section la ngoai scene context lam adapter suy bien.
+    registry_context = ""
     if registry_json_path and os.path.exists(registry_json_path):
         import sys
         if ROOT_DIR not in sys.path:
             sys.path.insert(0, ROOT_DIR)  # ROOT_DIR = demo/, chua package CHARACTER
-        from CHARACTER.registry_prompt import render_registry_block
+        from CHARACTER.registry_prompt import render_registry_context
         from CHARACTER.registry_schema import load_registry
-        registry_block = render_registry_block(load_registry(registry_json_path))
-        if registry_block:
+        registry_context = render_registry_context(load_registry(registry_json_path))
+        if registry_context:
             print(f"📇 Character registry loaded: {registry_json_path}", flush=True)
 
     scenes_data = []
@@ -161,22 +163,15 @@ def refine_subtitles(
         "    Keep meaning and structure unchanged.\n"
         "    Output only the corrected Vietnamese translation, line by line.   "
     )
-    if registry_block:
-        base_system += (
-            "\n    A <Character Registry> section lists the film's characters and "
-            "DIRECTED relations with the Vietnamese pronouns each speaker should "
-            "use. When a dialogue line matches a listed speaker->listener pair, "
-            "prefer the registry's pronouns over the rough translation's."
-        )
-
     # ── Pre-tokenize all prompts ─────────────────────────────────────────────
     print("Tokenizing all prompts...")
     all_input_ids = []
     for item in prompts:
+        scene_ctx = item['context']
+        if registry_context:
+            scene_ctx = f"{scene_ctx}\n    {registry_context}"
         full_sys = (f"{base_system}\n"
-                    f"    <Scene Context>\n    {item['context']}\n    </Scene Context>")
-        if registry_block:
-            full_sys += f"\n{registry_block}"
+                    f"    <Scene Context>\n    {scene_ctx}\n    </Scene Context>")
         user_msg = (f"<English Dialogue>\n{item['raw_en']}\n</English Dialogue>\n"
                     f"<Rough Vietnamese Translation>\n{item['vinai_sub']}\n"
                     f"</Rough Vietnamese Translation>")
