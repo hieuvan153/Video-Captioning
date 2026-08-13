@@ -1,5 +1,6 @@
 from CHARACTER.registry_schema import (
     Registry,
+    filter_registry_by_source,
     merge_registries,
     parse_registry,
     registry_to_json,
@@ -89,6 +90,31 @@ def test_merge_keeps_highest_confidence_relation():
                if r.rel_type == "grandchild->grandmother")
     assert rel.vi_self == "cháu"  # high thang low
     assert 50 in rel.evidence_lines  # evidence van duoc gop
+
+
+def test_filter_drops_characters_absent_from_source():
+    # Chong few-shot leak: LLM chep nhan vat cua schema example (Meemaw/Sheldon)
+    # vao registry cua phim khong he co ho => loc theo transcript+captions.
+    reg = parse_registry(RAW, n_lines=100)
+    source = "Sheldon said hi.\nA woman waves."  # co Sheldon, khong co Meemaw
+    filtered = filter_registry_by_source(reg, source)
+    assert [c.names[0] for c in filtered.characters] == ["Sheldon"]
+    assert filtered.relations == ()  # moi relation cham vao Meemaw deu bi drop
+
+
+def test_filter_keeps_all_when_names_present_case_insensitive():
+    reg = parse_registry(RAW, n_lines=100)
+    source = "MEEMAW plays cards with sheldon."
+    filtered = filter_registry_by_source(reg, source)
+    assert len(filtered.characters) == 2
+    assert len(filtered.relations) == 2
+
+
+def test_filter_matches_any_alias():
+    reg = parse_registry(RAW, n_lines=100)
+    # "Grandma" la alias thu 2 cua C1 => du "Meemaw" vang mat van giu
+    filtered = filter_registry_by_source(reg, "Grandma and Sheldon talk.")
+    assert len(filtered.characters) == 2
 
 
 def test_json_roundtrip():

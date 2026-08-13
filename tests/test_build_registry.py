@@ -35,10 +35,21 @@ def test_extract_registry_skips_unparseable_chunk():
         calls["n"] += 1
         return "GARBAGE NOT JSON" if calls["n"] == 1 else _CHUNK_RESPONSE
 
-    lines = [f"line {i}" for i in range(300)]  # 2 chunk voi size=200/overlap=30
+    # ten Anna/Tom phai co mat trong transcript, neu khong filter chong
+    # few-shot leak se drop ho
+    lines = [f"Anna tells Tom thing {i}" for i in range(300)]  # 2 chunk (200/30)
     reg = extract_registry(lines, "", flaky_generate)
     assert calls["n"] == 2
     assert len(reg.characters) == 2  # chunk 2 van duoc dung
+
+
+def test_extract_registry_drops_schema_example_leak():
+    # LLM tra ve nhan vat cua schema example du transcript khong nhac den ho
+    leak_response = _CHUNK_RESPONSE.replace("Anna", "Meemaw").replace("Tom", "Sheldon")
+
+    reg = extract_registry(["We need more cashiers.", "Sure."], "",
+                           lambda s, u: leak_response)
+    assert reg.characters == () and reg.relations == ()
 
 
 def test_extract_registry_empty_transcript():

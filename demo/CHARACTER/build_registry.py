@@ -32,6 +32,7 @@ from CHARACTER.registry_prompt import (
 )
 from CHARACTER.registry_schema import (
     Registry,
+    filter_registry_by_source,
     merge_registries,
     parse_registry,
     registry_to_json,
@@ -60,7 +61,16 @@ def extract_registry(
             continue
         partials.append(parse_registry(raw, n_lines=len(en_lines)))
         print(f"[registry] chunk {idx + 1}/{len(chunks)}: ok", flush=True)
-    return merge_registries(partials)
+    merged = merge_registries(partials)
+    # Chong few-shot leak: bo nhan vat khong duoc nhac den trong input that.
+    filtered = filter_registry_by_source(
+        merged, "\n".join(en_lines) + "\n" + captions_text
+    )
+    if len(filtered.characters) < len(merged.characters):
+        dropped = len(merged.characters) - len(filtered.characters)
+        print(f"[registry] dropped {dropped} character(s) absent from "
+              f"transcript/captions", flush=True)
+    return filtered
 
 
 def _load_en_lines(en_srt_path: str) -> list[str]:

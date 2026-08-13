@@ -185,6 +185,27 @@ def merge_registries(regs: list[Registry]) -> Registry:
     return Registry(tuple(merged_chars), relations)
 
 
+def filter_registry_by_source(reg: Registry, source_text: str) -> Registry:
+    """Drop nhan vat khong co ten nao xuat hien trong source (transcript+captions).
+
+    Chong few-shot leak: LLM thinh thoang chep nguyen nhan vat cua schema
+    example (Meemaw/Sheldon) vao registry cua phim khong lien quan; evidence
+    gate khong bat duoc vi so dong bia van nam trong pham vi hop le.
+    Relation cham vao nhan vat bi drop cung bi drop theo.
+    """
+    haystack = source_text.casefold()
+    kept = tuple(
+        c for c in reg.characters
+        if any(n.casefold() in haystack for n in c.names)
+    )
+    kept_ids = {c.id for c in kept}
+    relations = tuple(
+        r for r in reg.relations
+        if r.from_id in kept_ids and r.to_id in kept_ids
+    )
+    return Registry(kept, relations)
+
+
 def registry_to_json(reg: Registry) -> dict:
     return {
         "characters": [
