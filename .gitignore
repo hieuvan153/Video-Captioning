@@ -1,0 +1,18 @@
+# Root: only track project code + tests + docs
+/*
+!/.gitignore
+!/demo/
+!/tests/
+!/docs/
+
+# Generated / heavy content
+__pycache__/
+unsloth_compiled_cache/
+/demo/cache/
+/demo/model/
+/demo/output/
+/demo/test.mp4
+/demo/ASR/output/
+/demo/ASR/vad_chunks/
+/demo/scene_seg/output/
+/demo/NMT/*.srt
