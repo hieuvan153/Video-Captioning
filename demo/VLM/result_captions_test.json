@@ -1,0 +1,29 @@
+[
+  {
+    "scene_id": 0,
+    "video_file": "scene_0000.mp4",
+    "video_path": "/data/ndloc_bk/ntVan/demo/output/test_scenes/scene_0000.mp4",
+    "duration": 85.460375,
+    "start_time": null,
+    "end_time": null,
+    "caption": "1. A woman and a boy are playing cards at a table.\n2. Woman - Female - Adult; Boy - Male - Child.\n3. None."
+  },
+  {
+    "scene_id": 1,
+    "video_file": "scene_0001.mp4",
+    "video_path": "/data/ndloc_bk/ntVan/demo/output/test_scenes/scene_0001.mp4",
+    "duration": 30.28025,
+    "start_time": null,
+    "end_time": null,
+    "caption": "1. A woman enters a room and speaks to a boy sitting at a table with another woman.\n2. Woman 1 - Female - Adult; Boy - Male - Child; Woman 2 - Female - Adult.\n3. Woman 1 & Boy - Parent & Child; Woman 1 & Woman 2 - Friend or Family."
+  },
+  {
+    "scene_id": 2,
+    "video_file": "scene_0002.mp4",
+    "video_path": "/data/ndloc_bk/ntVan/demo/output/test_scenes/scene_0002.mp4",
+    "duration": 17.642625,
+    "start_time": null,
+    "end_time": null,
+    "caption": "1. A man and a woman are arguing in a kitchen while a young boy sits at the table. The man walks away, and the woman covers her face.\n2. [Man] - Male - Middle-aged; [Woman] - Female - Middle-aged; [Boy] - Male - Young.\n3. [Man & Woman] - Romantic relationship (or \"None\" if N/A)."
+  }
+]

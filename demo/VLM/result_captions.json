@@ -1,0 +1,29 @@
+[
+  {
+    "scene_id": 0,
+    "video_file": "scene_0000.mp4",
+    "video_path": "/data/ndloc_bk/ntVan/demo/scene_seg/output/result_scenes/scene_0000.mp4",
+    "duration": 65.27499999999999,
+    "start_time": 0.0,
+    "end_time": 65.31525,
+    "caption": "1. Summary: A crowd of people are sitting in a stadium, watching an event.\n2. Main Characters: [None] - [Female] - [All Ages].\n3. Relationship: [None]."
+  },
+  {
+    "scene_id": 1,
+    "video_file": "scene_0001.mp4",
+    "video_path": "/data/ndloc_bk/ntVan/demo/scene_seg/output/result_scenes/scene_0001.mp4",
+    "duration": 60.603,
+    "start_time": 65.31525,
+    "end_time": 124.707917,
+    "caption": "1. Summary: A crowd of people are watching an event in a stadium.\n2. Main Characters: [None] - [Unknown] - [Unknown].\n3. Relationship: [None] - [None]."
+  },
+  {
+    "scene_id": 2,
+    "video_file": "scene_0002.mp4",
+    "video_path": "/data/ndloc_bk/ntVan/demo/scene_seg/output/result_scenes/scene_0002.mp4",
+    "duration": 48.883,
+    "start_time": 124.707917,
+    "end_time": 171.796625,
+    "caption": "1. A woman is talking to a man at an Apple event.\n2. [W1] - Female - 20s; [M1] - Male - 30s.\n3. W1 & M1 - Colleague (or \"None\")."
+  }
+]
