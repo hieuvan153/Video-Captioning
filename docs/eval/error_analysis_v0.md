@@ -112,3 +112,26 @@ nhưng error analysis chỉ ra nguyên nhân **không phải** "quan hệ vô d�
 Script phân tích (per-line diff, sensitivity, bootstrap) nằm trong scratchpad
 phiên làm việc 2026-08-14; số liệu gốc: `demo/output/eval_ab/<movie>/` +
 `docs/eval/registry_ab_v0.json`.
+
+## Ghi chú triển khai (2026-08-14, cùng ngày)
+
+Cả 3 guardrail đã được implement + test (47 test pass):
+
+1. `demo/LLM/output_guard.py` + hook trong `refine_llm.py`: dòng suy biến
+   (1–3-gram lặp ≥8 lần chiếm >50% dòng ≥20 từ, hoặc >600 ký tự) fallback về
+   dòng rough, log `[guard]`, đánh dấu `fallback_used` trong debug JSON.
+   Verify trên 4.632 dòng output eval: bắt đúng 2 dòng suy biến đã biết,
+   0 false positive.
+2. `registry_schema.parse_registry`: drop character mà mọi tên đều là
+   đại từ/placeholder EN; drop relation có `vi_self`/`vi_listener` ngoài
+   lexicon xưng hô. Áp cả khi `load_registry` → registry đã lưu được lọc lại
+   không cần rebuild.
+3. `render_registry_context`: **chỉ render edge thân tộc confidence high**
+   (cả vi_self lẫn vi_listener ∈ `KINSHIP_TERMS`) và cần ≥2 cặp như vậy mới
+   tiêm. Tinh chỉnh so với khuyến nghị gốc sau khi soi registry thật:
+   movie_045 *có* edge gia đình thật (Meemaw bà/cháu) — cái gây hại là edge
+   generic (tôi/em teacher→student) được render kèm; nên lọc theo *nội dung
+   render* chứ không chỉ gate theo số cặp. Kết quả trên 6 registry đã lưu:
+   009 tắt; 008/015/045/046/test bật nhưng dòng tiêm chỉ còn các cặp
+   bố/con–mẹ/con–bà/cháu, mọi edge generic từng đo được là gây hại biến mất.
+   Display name ưu tiên tên thật thay vì alias đại từ ("I" → "Baby").

@@ -19,6 +19,11 @@ from tqdm import tqdm
 # Dynamic root folder calculation (corresponds to the demo folder)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+import sys
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+from LLM.output_guard import is_degenerate_line
+
 # Login to Hugging Face (token from env; needed only if the adapter repo is private)
 _hf_token = os.environ.get("HF_TOKEN")
 if _hf_token:
@@ -285,6 +290,17 @@ def refine_subtitles(
             lines_out = [l.strip() for l in decoded.split("\n") if l.strip()]
             n_src = len(item["indices"])
 
+            # Guardrail: dong suy bien (lap n-gram) -> fallback dong rough.
+            degenerate_ks = set()
+            for k in range(min(len(lines_out), n_src)):
+                if is_degenerate_line(lines_out[k]):
+                    degenerate_ks.add(k)
+                    s_idx = item["indices"][k]
+                    print(f"⚠️ [guard] degenerate output at subtitle "
+                          f"{en_subs[s_idx].index}: {lines_out[k][:60]!r}… "
+                          f"-> rough fallback", flush=True)
+                    lines_out[k] = vinai_subs[s_idx].content
+
             # Record translations before adjustment for fallback tracking
             scene_translations = []
             for k, s_idx in enumerate(item["indices"]):
@@ -295,6 +311,7 @@ def refine_subtitles(
                     fallback_used = True
                 else:
                     refined_val = lines_out[k]
+                    fallback_used = k in degenerate_ks
 
                 scene_translations.append({
                     "subtitle_index": en_subs[s_idx].index,

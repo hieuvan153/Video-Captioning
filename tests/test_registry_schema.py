@@ -122,3 +122,55 @@ def test_json_roundtrip():
     raw = registry_to_json(reg)
     reg2 = parse_registry(raw, n_lines=100)
     assert reg == reg2
+
+
+def test_parse_drops_placeholder_named_characters():
+    # Registry that tung sinh nhan vat tu dai tu ("You", "Me", "I", "Him") —
+    # khong the map speaker, chi gay nhieu (docs/eval/error_analysis_v0.md).
+    raw = {
+        "characters": [
+            {"id": "C1", "names": ["You"], "gender": "unknown",
+             "age_range": "adult", "evidence_lines": [1]},
+            {"id": "C2", "names": ["Me", "I"], "gender": "unknown",
+             "age_range": "adult", "evidence_lines": [2]},
+            {"id": "C3", "names": ["Sheldon"], "gender": "male",
+             "age_range": "child", "evidence_lines": [3]},
+            {"id": "C4", "names": ["Him", "Rodger"], "gender": "male",
+             "age_range": "adult", "evidence_lines": [4]},  # co ten that -> giu
+        ],
+        "relations": [
+            {"from_id": "C1", "to_id": "C3", "rel_type": "unknown",
+             "vi_self": "anh", "vi_listener": "em", "confidence": "high",
+             "evidence_lines": [1]},
+        ],
+    }
+    reg = parse_registry(raw, n_lines=10)
+    assert {c.id for c in reg.characters} == {"C3", "C4"}
+    assert reg.relations == ()  # from_id C1 da bi drop keo theo relation
+
+
+def test_parse_drops_relation_with_non_lexicon_pronouns():
+    # Gia tri rac quan sat trong registry that: "glenn", "anh/chị",
+    # "(addressed as)" — vi_self/vi_listener phai la tu xung ho trong lexicon.
+    raw = {
+        "characters": RAW["characters"],
+        "relations": [
+            {"from_id": "C2", "to_id": "C1", "rel_type": "x",
+             "vi_self": "glenn", "vi_listener": "tôi", "confidence": "high",
+             "evidence_lines": [1]},
+            {"from_id": "C1", "to_id": "C2", "rel_type": "x",
+             "vi_self": "anh/chị", "vi_listener": "em", "confidence": "high",
+             "evidence_lines": [1]},
+        ],
+    }
+    assert parse_registry(raw, n_lines=100).relations == ()
+    ok = {
+        "characters": RAW["characters"],
+        "relations": [
+            {"from_id": "C2", "to_id": "C1", "rel_type": "lover",
+             "vi_self": "em", "vi_listener": "anh", "confidence": "high",
+             "evidence_lines": [1]},
+        ],
+    }
+    reg = parse_registry(ok, n_lines=100)
+    assert len(reg.relations) == 1 and reg.relations[0].vi_self == "em"

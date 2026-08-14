@@ -58,12 +58,14 @@ def _sample_registry() -> Registry:
     chars = (
         Character("C1", ("Meemaw", "Grandma"), "female", "elderly", (35,)),
         Character("C2", ("Sheldon",), "male", "child", (1,)),
+        Character("C3", ("George",), "male", "adult", (7,)),
     )
     rels = (
         Relation("C2", "C1", "grandchild->grandmother", "cháu", "bà",
                  "high", (35,)),
         Relation("C1", "C2", "grandmother->grandchild", "bà", "cháu",
                  "low", (35,)),
+        Relation("C3", "C2", "father->son", "bố", "con", "high", (7,)),
     )
     return Registry(chars, rels)
 
@@ -107,10 +109,12 @@ def test_render_context_skips_neutral_toi_ban_edges():
         Character("C1", ("Glenn",), "male", "adult", (1,)),
         Character("C2", ("Kitty",), "female", "adult", (2,)),
         Character("C3", ("Sal",), "male", "adult", (3,)),
+        Character("C4", ("Mai",), "female", "elderly", (4,)),
     )
     rels = (
         Relation("C1", "C2", "coworker", "tôi", "bạn", "high", (1,)),
         Relation("C3", "C2", "lover", "anh", "em", "high", (3,)),
+        Relation("C4", "C2", "mother->daughter", "mẹ", "con", "high", (4,)),
     )
     ctx = render_registry_context(Registry(chars, rels))
     assert "Glenn" not in ctx          # cap chi co edge trung tinh -> bien mat
@@ -124,3 +128,49 @@ def test_render_context_all_neutral_returns_empty():
     )
     rels = (Relation("C1", "C2", "coworker", "tôi", "bạn", "high", (1,)),)
     assert render_registry_context(Registry(chars, rels)) == ""
+
+
+def test_render_context_gate_needs_two_high_kinship_pairs():
+    # Selective activation (docs/eval/error_analysis_v0.md): chi tiem registry
+    # khi co >= 2 cap quan he than toc confidence high; 1 cap -> bo qua.
+    chars = (
+        Character("C1", ("Meemaw",), "female", "elderly", (35,)),
+        Character("C2", ("Sheldon",), "male", "child", (1,)),
+    )
+    rels = (
+        Relation("C2", "C1", "grandchild->grandmother", "cháu", "bà",
+                 "high", (35,)),
+    )
+    assert render_registry_context(Registry(chars, rels)) == ""
+
+
+def test_render_context_gate_generic_pairs_dont_count():
+    # Edge kieu "tôi"/"anh" (self generic) khong tinh la cap kinship du
+    # confidence high — do la loai edge do duoc la gay hai (movie_045).
+    chars = (
+        Character("C1", ("Amy",), "female", "adult", (1,)),
+        Character("C2", ("Jonah",), "male", "adult", (2,)),
+        Character("C3", ("Dina",), "female", "adult", (3,)),
+    )
+    rels = (
+        Relation("C1", "C2", "colleague", "tôi", "anh", "high", (1,)),
+        Relation("C3", "C2", "colleague", "tôi", "cô", "high", (2,)),
+    )
+    assert render_registry_context(Registry(chars, rels)) == ""
+
+
+def test_render_context_display_name_skips_placeholder_alias():
+    # Nhan vat merge tu nhieu chunk co the co alias dai tu dung dau
+    # (["I", "Marta"]) — display name phai la ten that.
+    chars = (
+        Character("C1", ("I", "Marta"), "female", "adult", (1,)),
+        Character("C2", ("Cụ Bà",), "female", "elderly", (2,)),
+        Character("C3", ("Tí",), "male", "child", (3,)),
+    )
+    rels = (
+        Relation("C1", "C2", "child->mother", "con", "mẹ", "high", (1,)),
+        Relation("C3", "C2", "grandchild->grandmother", "cháu", "bà",
+                 "high", (3,)),
+    )
+    ctx = render_registry_context(Registry(chars, rels))
+    assert "Marta" in ctx and "I &" not in ctx

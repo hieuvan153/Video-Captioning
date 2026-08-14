@@ -2,15 +2,29 @@
 
 Chong poisoning: moi Relation BAT BUOC co evidence_lines hop le trong pham vi
 transcript; edge khong evidence / id la / self-loop bi drop ngay khi parse.
+
+Siet them sau error analysis V0 (docs/eval/error_analysis_v0.md):
+- Character ma MOI ten deu la dai tu/placeholder tieng Anh ("You", "Me",
+  "Him", "Speaker"...) bi drop — khong the map ve speaker that, chi gay nhieu.
+- vi_self/vi_listener phai thuoc lexicon xung ho (EVAL.pronoun_lexicon) —
+  chan gia tri rac tung sinh ra that: "glenn", "anh/chị", "(addressed as)".
 """
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
 
+from EVAL.pronoun_lexicon import PRONOUN_TERMS
+
 CONFIDENCE_LEVELS: dict[str, int] = {"high": 2, "medium": 1, "low": 0}
 _GENDERS = {"male", "female", "unknown"}
 _AGE_RANGES = {"child", "teen", "adult", "elderly", "unknown"}
+PLACEHOLDER_NAMES = frozenset({
+    "i", "you", "me", "he", "she", "him", "her", "it", "we", "us",
+    "they", "them", "this", "that", "all",
+    "everyone", "someone", "anyone", "anybody", "nobody", "no one",
+    "speaker", "listener", "narrator", "person", "people", "guy", "dude",
+})
 
 
 @dataclass(frozen=True)
@@ -62,6 +76,8 @@ def parse_registry(raw: dict, n_lines: int) -> Registry:
         )
         if not cid or not names or cid in ids:
             continue
+        if all(n.casefold() in PLACEHOLDER_NAMES for n in names):
+            continue
         ids.add(cid)
         characters.append(Character(
             id=cid,
@@ -83,8 +99,9 @@ def parse_registry(raw: dict, n_lines: int) -> Registry:
         vi_listener = str(r.get("vi_listener", "")).strip().lower()
         evidence = _valid_lines(r.get("evidence_lines"), n_lines)
         if (from_id not in ids or to_id not in ids or from_id == to_id
-                or not vi_self or not vi_listener or not evidence
-                or (from_id, to_id) in seen):
+                or vi_self not in PRONOUN_TERMS
+                or vi_listener not in PRONOUN_TERMS
+                or not evidence or (from_id, to_id) in seen):
             continue
         seen.add((from_id, to_id))
         confidence = (

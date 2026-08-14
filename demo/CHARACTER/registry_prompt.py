@@ -4,7 +4,11 @@ from __future__ import annotations
 import json
 import re
 
-from CHARACTER.registry_schema import CONFIDENCE_LEVELS, Registry
+from CHARACTER.registry_schema import (
+    CONFIDENCE_LEVELS,
+    PLACEHOLDER_NAMES,
+    Registry,
+)
 
 EXTRACTION_SYSTEM = (
     "You are an expert film-script analyst. You read English movie dialogue and "
@@ -100,8 +104,18 @@ def parse_llm_json(text: str) -> dict | None:
     return obj if isinstance(obj, dict) else None
 
 
+# Tu xung ho than toc/co huong — dung cho gate selective activation.
+# "tôi"/"ta"/"bạn"... generic KHONG nam trong day: edge ma vi_self generic
+# khong mang thong tin xung ho co huong (xem docs/eval/error_analysis_v0.md).
+KINSHIP_TERMS: frozenset[str] = frozenset({
+    "con", "mẹ", "má", "u", "bố", "ba", "cha", "bà", "ông", "cụ", "cháu",
+    "chú", "bác", "cô", "dì", "cậu", "mợ", "thím", "anh", "chị", "em", "thầy",
+})
+
+
 def render_registry_context(
-    reg: Registry, max_pairs: int = 6, min_confidence: str = "medium"
+    reg: Registry, max_pairs: int = 6, min_confidence: str = "high",
+    min_kinship_pairs: int = 2,
 ) -> str:
     """Render registry thanh 1 dong 'Relationship: ...' de noi VAO Scene Context.
 
@@ -109,21 +123,34 @@ def render_registry_context(
     "3. Relationship: [A & B] - [Type]" ben trong <Scene Context>; block XML
     dat ngoai section nay lam adapter suy bien (output lap vo nghia), nen
     registry phai duoc dien dat dung style caption, 1 dong prose, khong tag.
+
+    Selective activation (docs/eval/error_analysis_v0.md): CHI edge than toc
+    confidence cao (ca vi_self lan vi_listener thuoc KINSHIP_TERMS) duoc
+    render, va phai co >= min_kinship_pairs cap nhu vay thi moi tiem — nguoc
+    lai tra "" va pipeline chay nhu baseline. Ly do: A/B do duoc edge generic
+    (tôi/em, tôi/anh) leak vao sai speaker gay hai (movie_045 −0.036 F1),
+    trong khi phim toan edge than toc high huong loi (movie_046 +0.046 F1).
     """
     if not reg.characters:
         return ""
     min_rank = CONFIDENCE_LEVELS[min_confidence]
-    name_of = {c.id: c.names[0] for c in reg.characters}
+    # Uu tien ten that lam display name: nhan vat merge tu nhieu chunk co the
+    # mang alias dai tu ("I", "Speaker") dung dau danh sach.
+    name_of = {
+        c.id: next(
+            (n for n in c.names if n.casefold() not in PLACEHOLDER_NAMES),
+            c.names[0],
+        )
+        for c in reg.characters
+    }
     pairs: dict[tuple[str, str], list] = {}
     for r in reg.relations:
-        if CONFIDENCE_LEVELS[r.confidence] < min_rank:
-            continue
-        # "tôi"/"bạn" la cap trung tinh mac dinh cua NMT: khong mang thong tin
-        # xung ho, chi lam prompt dai va day model paraphrase lech.
-        if r.vi_self == "tôi" and r.vi_listener == "bạn":
+        if (CONFIDENCE_LEVELS[r.confidence] < min_rank
+                or r.vi_self not in KINSHIP_TERMS
+                or r.vi_listener not in KINSHIP_TERMS):
             continue
         pairs.setdefault(tuple(sorted((r.from_id, r.to_id))), []).append(r)
-    if not pairs:
+    if len(pairs) < min_kinship_pairs:
         return ""
 
     def best_rank(rels) -> int:
