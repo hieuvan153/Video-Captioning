@@ -4,6 +4,10 @@ import json
 import time
 import argparse
 import srt
+
+# Reduce fragmentation-driven OOM on the shared GPU (must be set before CUDA init).
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import torch
 
 # Disable torch.compile (Dynamo) to prevent compilation overhead for dynamic sequence lengths.
@@ -51,6 +55,71 @@ def find_best_scene(midpoint, scenes):
         if s <= midpoint <= e:
             return idx
     return -1
+
+
+def _pad_and_generate(model, tokenizer, ids_list, max_new_tokens):
+    """Left-pad a list of 1-D input_ids, generate, return decoded new tokens."""
+    max_len = max(t.size(0) for t in ids_list)
+    padded_list = []
+    attention_mask_list = []
+    for t in ids_list:
+        pad_len = max_len - t.size(0)
+        if pad_len > 0:
+            pad_tensor = torch.full((pad_len,), tokenizer.pad_token_id, dtype=t.dtype)
+            padded_t = torch.cat([pad_tensor, t], dim=0)
+            mask_t = torch.cat([torch.zeros(pad_len, dtype=torch.long),
+                                torch.ones(t.size(0), dtype=torch.long)], dim=0)
+        else:
+            padded_t = t
+            mask_t = torch.ones(t.size(0), dtype=torch.long)
+        padded_list.append(padded_t)
+        attention_mask_list.append(mask_t)
+
+    padded_batch = torch.stack(padded_list).to("cuda")
+    attention_mask_batch = torch.stack(attention_mask_list).to("cuda")
+
+    with torch.inference_mode():
+        outputs = model.generate(
+            input_ids=padded_batch,
+            attention_mask=attention_mask_batch,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+        )
+    # Slice from max_len because of left padding.
+    return [tokenizer.decode(out[max_len:], skip_special_tokens=True)
+            for out in outputs]
+
+
+def _generate_batch_safe(model, tokenizer, ids_list, max_new_tokens,
+                         oom_wait_s=60, oom_max_waits=30):
+    """The GPU is shared with other users, so VRAM can vanish at any moment.
+    On CUDA OOM: free the cache, halve the batch; if a single prompt still
+    OOMs, wait for other processes to release VRAM and retry."""
+    try:
+        return _pad_and_generate(model, tokenizer, ids_list, max_new_tokens)
+    except torch.OutOfMemoryError:
+        torch.cuda.empty_cache()
+
+    if len(ids_list) > 1:
+        mid = (len(ids_list) + 1) // 2
+        print(f"⚠️ CUDA OOM (batch={len(ids_list)}) → retry as "
+              f"{mid}+{len(ids_list) - mid}", flush=True)
+        return (_generate_batch_safe(model, tokenizer, ids_list[:mid],
+                                     max_new_tokens, oom_wait_s, oom_max_waits)
+                + _generate_batch_safe(model, tokenizer, ids_list[mid:],
+                                       max_new_tokens, oom_wait_s, oom_max_waits))
+
+    for n in range(oom_max_waits):
+        print(f"⚠️ CUDA OOM (batch=1), waiting {oom_wait_s}s for shared GPU "
+              f"({n + 1}/{oom_max_waits})", flush=True)
+        time.sleep(oom_wait_s)
+        torch.cuda.empty_cache()
+        try:
+            return _pad_and_generate(model, tokenizer, ids_list, max_new_tokens)
+        except torch.OutOfMemoryError:
+            torch.cuda.empty_cache()
+    raise torch.OutOfMemoryError(
+        "CUDA OOM: still no free VRAM after waiting for other GPU processes")
 
 
 def refine_subtitles(
@@ -181,10 +250,11 @@ def refine_subtitles(
             {"role": "user",   "content": [{"type": "text", "text": user_msg}]},
         ]
 
+        # Keep on CPU; moved to GPU per batch inside _pad_and_generate.
         input_ids = tokenizer.apply_chat_template(
             messages, tokenize=True, return_tensors="pt",
             add_generation_prompt=True
-        ).to("cuda")
+        )
         all_input_ids.append(input_ids)
 
     assert len(all_input_ids) == len(prompts)
@@ -200,44 +270,17 @@ def refine_subtitles(
         batch_slice = slice(idx, idx + batch_size)
         batch_prompts = prompts[batch_slice]
         batch_input_ids = [t.squeeze(0) for t in all_input_ids[batch_slice]]
-        
-        # Left padding
-        max_len = max(t.size(0) for t in batch_input_ids)
-        padded_list = []
-        attention_mask_list = []
-        for t in batch_input_ids:
-            pad_len = max_len - t.size(0)
-            if pad_len > 0:
-                pad_tensor = torch.full((pad_len,), tokenizer.pad_token_id, dtype=t.dtype, device=t.device)
-                padded_t = torch.cat([pad_tensor, t], dim=0)
-                mask_t = torch.cat([torch.zeros(pad_len, dtype=torch.long, device=t.device),
-                                    torch.ones(t.size(0), dtype=torch.long, device=t.device)], dim=0)
-            else:
-                padded_t = t
-                mask_t = torch.ones(t.size(0), dtype=torch.long, device=t.device)
-            padded_list.append(padded_t)
-            attention_mask_list.append(mask_t)
-
-        padded_batch = torch.stack(padded_list).to("cuda")
-        attention_mask_batch = torch.stack(attention_mask_list).to("cuda")
 
         t0 = time.time()
-        with torch.inference_mode():
-            outputs = model.generate(
-                input_ids=padded_batch,
-                attention_mask=attention_mask_batch,
-                max_new_tokens=max_new_tokens,
-                do_sample=False,
-            )
+        decoded_batch = _generate_batch_safe(
+            model, tokenizer, batch_input_ids, max_new_tokens
+        )
         elapsed = time.time() - t0
         print(f"Batch [{idx//batch_size + 1}/{(num_prompts - 1)//batch_size + 1}] finished in {elapsed:.1f}s", flush=True)
 
         # Process each response in the batch
         for i, item in enumerate(batch_prompts):
-            out = outputs[i]
-            # Slice starting from max_len (because of left padding)
-            new_tokens = out[max_len:]
-            decoded = tokenizer.decode(new_tokens, skip_special_tokens=True)
+            decoded = decoded_batch[i]
 
             lines_out = [l.strip() for l in decoded.split("\n") if l.strip()]
             n_src = len(item["indices"])

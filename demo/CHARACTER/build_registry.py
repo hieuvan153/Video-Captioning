@@ -20,6 +20,9 @@ import os
 import re
 import sys
 
+# Giam OOM do phan manh VRAM tren GPU dung chung (phai set truoc khi CUDA init).
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 
