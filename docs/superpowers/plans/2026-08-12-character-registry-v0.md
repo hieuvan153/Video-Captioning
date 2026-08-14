@@ -1677,7 +1677,7 @@ Kiểm tra:
 diff "demo/output/test.baseline.srt" "demo/output/test.(Tiếng Việt_tinh_chinh).srt" | head -50
 ```
 
-- [ ] **Step 8: Đo Pronoun F1 trên eval set có reference (SERVER)**
+- [x] **Step 8: Đo Pronoun F1 trên eval set có reference (SERVER)** *(chạy 2026-08-13→14 qua `run_task8.sh`, kết quả `docs/eval/registry_ab_v0.json` — xem "Kết quả A/B V0" cuối task)*
 
 Chọn 3–5 phim từ `data/en-vi-speaker-with-time-pronouns/` mà server còn video gốc. Với mỗi phim: chạy pipeline 2 lần (có/không `--use_registry`), rồi:
 
@@ -1717,7 +1717,7 @@ Số dòng hyp (ASR cắt) sẽ khác số dòng ref — `run_eval.py` tự đ�
 - BLEU/chrF không giảm quá 0.5 điểm (registry không được phá nghĩa câu).
 - Không dòng nào rỗng/lệch index trong SRT output (đếm dòng 2 file bằng nhau).
 
-- [ ] **Step 9: Commit + ghi kết quả**
+- [x] **Step 9: Commit + ghi kết quả** *(wiring đã commit ở `2b37c74`; kết quả eval + OOM hardening commit riêng; đã ghi memory `video-captioning-pipeline.md`)*
 
 ```bash
 git add demo/run_pipeline.py docs/eval/
@@ -1725,6 +1725,24 @@ git commit -m "feat: wire optional character-registry step 5b into pipeline with
 ```
 
 Ghi kết quả A/B (con số cụ thể) vào memory `video-captioning-pipeline.md` để phiên sau có gate V1.
+
+**Kết quả A/B V0 (2026-08-14, 5 phim × 3 arm, `docs/eval/registry_ab_v0.json`):**
+
+| Movie | F1 rough | F1 baseline | F1 registry | ΔF1 (reg−base) | ΔBLEU | ΔchrF |
+|---|---|---|---|---|---|---|
+| movie_008 | 0.4877 | 0.4882 | 0.4853 | −0.0029 | +0.65 | +0.47 |
+| movie_009 | 0.5602 | 0.6103 | 0.5961 | −0.0142 | +0.16 | −0.01 |
+| movie_015 | 0.4890 | 0.3873 | 0.5057 | **+0.1184** | +5.32 | +1.31 |
+| movie_045 | 0.3138 | 0.3761 | 0.3402 | −0.0359 | −0.11 | −0.40 |
+| movie_046 | 0.3061 | 0.4325 | 0.4785 | **+0.0460** | +0.50 | −0.11 |
+| **Mean** | | | | **+0.0223** | +1.30 | +0.25 |
+
+**Đối chiếu acceptance criteria:**
+1. ΔPronoun F1 ≥ +0.03: **KHÔNG ĐẠT** (+0.0223, 2/5 phim cải thiện). Phương sai lớn: movie_015 baseline suy sụp (F1 0.387 < rough 0.489, BLEU −5.5) và registry khôi phục hoàn toàn; 3 phim còn lại giảm nhẹ (−0.003…−0.036).
+2. BLEU/chrF không giảm >0.5: **ĐẠT** (mean BLEU +1.30, chrF +0.25; không phim nào giảm quá 0.5 điểm chrF/BLEU… movie_045 chrF −0.40 vẫn trong ngưỡng).
+3. SRT hợp lệ: **ĐẠT** (cả 5 phim: số dòng baseline = registry = en.srt, 0 dòng rỗng).
+
+**Kết luận gate:** V0 nằm giữa hai nhánh quyết định (+0.0223, không phải ≈0 nhưng chưa tới +0.03) → theo outline "Sau V0": cần **error analysis** trước khi đầu tư V1. Tín hiệu chính: registry giúp mạnh khi baseline sai hệ thống về xưng hô (015, 046) nhưng gây nhiễu nhẹ khi baseline đã tốt (009, 045) — gợi ý hướng V1 speaker-attribution (registry đúng nhưng thiếu thông tin *ai đang nói* per line) hoặc chỉ kích hoạt registry có chọn lọc.
 
 ---
 
