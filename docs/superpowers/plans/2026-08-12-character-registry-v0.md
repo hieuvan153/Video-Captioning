@@ -1744,6 +1744,16 @@ Ghi kết quả A/B (con số cụ thể) vào memory `video-captioning-pipeline
 
 **Kết luận gate:** V0 nằm giữa hai nhánh quyết định (+0.0223, không phải ≈0 nhưng chưa tới +0.03) → theo outline "Sau V0": cần **error analysis** trước khi đầu tư V1. Tín hiệu chính: registry giúp mạnh khi baseline sai hệ thống về xưng hô (015, 046) nhưng gây nhiễu nhẹ khi baseline đã tốt (009, 045) — gợi ý hướng V1 speaker-attribution (registry đúng nhưng thiếu thông tin *ai đang nói* per line) hoặc chỉ kích hoạt registry có chọn lọc.
 
+> **⚠️ ĐÍNH CHÍNH SAU ERROR ANALYSIS (2026-08-14, xem `docs/eval/error_analysis_v0.md`):**
+> +0.1184 của movie_015 là **artifact** — 1 dòng suy biến ("Thằng nhóc," lặp ~253
+> lần) trong arm baseline phá precision cả phim; vá dòng đó thì ΔF1 movie_015 chỉ
+> còn +0.0057 và **mean ΔF1 corrected = −0.0003** (ΔBLEU ≈ 0). Hai phim
+> significant theo bootstrap: 046 **+0.046** (giúp thật, registry toàn kinship
+> high-confidence) và 045 **−0.036** (hại thật, vocab edge generic leak vào sai
+> speaker). Cấu trúc lỗi còn lại (FP generic tôi/anh, FN từ xưng hô có hướng)
+> chỉ về bottleneck **speaker attribution per line** → khuyến nghị GO V1 kèm
+> 3 guardrail (chống suy biến, siết validate registry, selective activation).
+
 ---
 
 ## Sau V0 — outline quyết định cho V1/V2 (KHÔNG thuộc phạm vi thực thi plan này)
