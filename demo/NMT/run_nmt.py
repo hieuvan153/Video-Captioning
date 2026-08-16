@@ -124,9 +124,9 @@ def main():
     args = parse_args()
     
     # 1. Đọc và tiền xử lý file SRT tiếng Anh
-    print(f"📖 Đang đọc file phụ đề tiếng Anh: {args.input_srt}")
+    print(f"Đang đọc file phụ đề tiếng Anh: {args.input_srt}")
     if not os.path.exists(args.input_srt):
-        print(f"❌ Lỗi: File không tồn tại -> {args.input_srt}")
+        print(f"Lỗi: File không tồn tại -> {args.input_srt}")
         return
         
     with open(args.input_srt, "r", encoding="utf-8") as f:
@@ -137,11 +137,11 @@ def main():
         sub.content = " ".join(line.strip() for line in sub.content.splitlines() if line.strip())
         sub.content = re.sub(r'\s+', ' ', sub.content).strip()
         
-    print(f"✓ Đã load {len(subtitles)} phụ đề.")
+    print(f"Đã load {len(subtitles)} phụ đề.")
 
     # 2. Khởi tạo Tokenizer và Model dịch VinAI
-    print(f"🚀 Đang tải mô hình từ: {args.model_path}")
-    print(f"⚙️ Thiết bị sử dụng: {args.device}")
+    print(f"Đang tải mô hình từ: {args.model_path}")
+    print(f"Thiết bị sử dụng: {args.device}")
     
     try:
         tokenizer_en2vi = AutoTokenizer.from_pretrained(
@@ -156,13 +156,13 @@ def main():
         model_en2vi.to(args.device)
         if args.device == "cuda" or "cuda" in args.device:
             model_en2vi.half()  # Dùng FP16 để tăng tốc độ và tiết kiệm VRAM
-        print("✓ Tải mô hình thành công!")
+        print("Tải mô hình thành công!")
     except Exception as e:
-        print(f"❌ Lỗi khi tải mô hình: {e}")
+        print(f"Lỗi khi tải mô hình: {e}")
         return
 
     # 3. Tiến hành dịch thô
-    print("✍️ Đang thực hiện dịch thô phụ đề...")
+    print("Đang thực hiện dịch thô phụ đề...")
     start_time = time.time()
     
     translated_subs = translate_en2vi(
@@ -174,7 +174,7 @@ def main():
     )
     
     end_time = time.time()
-    print(f"✓ Dịch xong trong {end_time - start_time:.2f} giây.")
+    print(f"Dịch xong trong {end_time - start_time:.2f} giây.")
 
     # 4. Ghi file phụ đề tiếng Việt đã dịch
     os.makedirs(os.path.dirname(args.output_srt), exist_ok=True)
@@ -183,7 +183,7 @@ def main():
     with open(args.output_srt, "w", encoding="utf-8") as f:
         f.write(srt_content)
         
-    print(f"💾 Kết quả phụ đề đã được lưu tại: {args.output_srt}")
+    print(f"Kết quả phụ đề đã được lưu tại: {args.output_srt}")
 
 if __name__ == "__main__":
     main()
