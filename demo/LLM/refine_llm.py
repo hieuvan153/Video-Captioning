@@ -52,6 +52,11 @@ def parse_args():
                         help="Optional per-line speaker JSON (built by "
                              "SPEAKER/build_speakers.py). Enables [SPEAKER: X] "
                              "tags and per-scene registry scoping.")
+    parser.add_argument("--registry_scope", type=str, default="pair",
+                        choices=["pair", "any"],
+                        help="Scene-registry firing rule: 'pair' needs both "
+                             "edge endpoints speaking adjacently (V1), 'any' "
+                             "needs one named endpoint in the scene (V2a).")
     return parser.parse_args()
 
 
@@ -142,7 +147,8 @@ def refine_subtitles(
     max_new_tokens=1024,
     llm_batch_size=8,
     registry_json_path=None,
-    speaker_json_path=None
+    speaker_json_path=None,
+    registry_scope="pair"
 ):
     if cache_dir is None:
         cache_dir = os.path.join(ROOT_DIR, "cache")
@@ -190,6 +196,7 @@ def refine_subtitles(
         from CHARACTER.registry_prompt import (
             render_registry_context,
             render_scene_registry_context,
+            render_speaker_registry_context,
         )
         from CHARACTER.registry_schema import load_registry
         registry = load_registry(registry_json_path)
@@ -229,10 +236,13 @@ def refine_subtitles(
             line_names = [speaker_names[j] for j in chunk]
             # Tag phia EN: so dong tieng Viet output khong doi.
             en_lines = tag_english_lines(en_lines, line_names)
-            scene_reg = (
-                render_scene_registry_context(registry, turn_pairs(line_names))
-                if registry is not None else ""
-            )
+            if registry is None:
+                scene_reg = ""
+            elif registry_scope == "any":
+                scene_reg = render_speaker_registry_context(registry, line_names)
+            else:
+                scene_reg = render_scene_registry_context(
+                    registry, turn_pairs(line_names))
             if scene_reg:
                 n_scene_reg += 1
 
@@ -344,7 +354,6 @@ def refine_subtitles(
             # Record translations before adjustment for fallback tracking
             scene_translations = []
             for k, s_idx in enumerate(item["indices"]):
-                refined_candidate = lines_out[k] if k < len(lines_out) else ""
                 fallback_used = False
                 if k >= len(lines_out):
                     refined_val = vinai_subs[s_idx].content
@@ -413,6 +422,7 @@ def main():
         llm_batch_size=args.llm_batch_size,
         registry_json_path=args.registry_json,
         speaker_json_path=args.speaker_json,
+        registry_scope=args.registry_scope,
     )
 
 

@@ -140,12 +140,16 @@ def _kinship_pairs(
     return pairs
 
 
-def _format_pairs(pairs: dict, name_of: dict[str, str], max_pairs: int) -> str:
-    def best_rank(rels) -> int:
-        return max(CONFIDENCE_LEVELS[r.confidence] for r in rels)
+def _best_rank(rels) -> int:
+    return max(CONFIDENCE_LEVELS[r.confidence] for r in rels)
 
+
+def _format_pairs(pairs: dict, name_of: dict[str, str], max_pairs: int,
+                  sort_key=None) -> str:
+    if sort_key is None:
+        sort_key = lambda kv: -_best_rank(kv[1])
     entries = []
-    for key, rels in sorted(pairs.items(), key=lambda kv: -best_rank(kv[1]))[:max_pairs]:
+    for key, rels in sorted(pairs.items(), key=sort_key)[:max_pairs]:
         a, b = key
         hints = "; ".join(
             f'{name_of[r.from_id]} calls {name_of[r.to_id]} "{r.vi_listener}" '
@@ -234,6 +238,56 @@ def render_scene_registry_context(
     if not scoped:
         return ""
     rendered = _format_pairs(scoped, _display_names(reg), max_pairs)
+    return f"Relationship (speakers in this scene): {rendered}" if rendered else ""
+
+
+def render_speaker_registry_context(
+    reg: Registry, line_names, max_pairs: int = 4,
+    min_confidence: str = "high", min_kinship_pairs: int = 2,
+) -> str:
+    """V2a: noi long dieu kien cua render_scene_registry_context.
+
+    line_names: ten speaker tung dong trong scene (None = khong biet).
+
+    V1 doi CA HAI dau canh cung co ten VA thoai ke nhau — do tren bo eval
+    (docs/eval/speaker_ab_v1.md) chi kich hoat 6/157 scene, 0 o 4/5 phim:
+    ba tang hao hut (dat ten dung x trung ten registry x ke nhau) nhan vao
+    gan bang 0. O day chi can MOT dau canh la speaker co ten trong scene —
+    nguoi doi thoai thuong chinh la dau kia nhung chua duoc dinh danh
+    (17-29% dong khong co tag).
+
+    Van khac V0 o cho then chot: V0 tiem cung mot dong vao MOI scene ke ca
+    khi ca hai nhan vat vang mat; o day nguoi trong canh phai that su cam
+    mic trong scene. Guardrail giu nguyen (gate cap phim, chi edge than toc
+    high, alias mo ho bi bo); them: scene phai co >= 2 dong thoai (doc thoai
+    khong can xung ho doi dap), cap du hai dau xep truoc cap mot dau.
+    """
+    if not reg.characters or len(line_names) < 2:
+        return ""
+    named = {n for n in line_names if n}
+    if not named:
+        return ""
+    pairs = _kinship_pairs(reg, min_confidence)
+    if len(pairs) < min_kinship_pairs:
+        return ""
+
+    id_of = _alias_index(reg)
+    present = {id_of[n.casefold()] for n in named if n.casefold() in id_of}
+    if not present:
+        return ""
+    scoped = {}
+    n_present = {}
+    for key, rels in pairs.items():
+        hits = (key[0] in present) + (key[1] in present)
+        if hits:
+            scoped[key] = rels
+            n_present[key] = hits
+    if not scoped:
+        return ""
+    rendered = _format_pairs(
+        scoped, _display_names(reg), max_pairs,
+        sort_key=lambda kv: (-n_present[kv[0]], -_best_rank(kv[1])),
+    )
     return f"Relationship (speakers in this scene): {rendered}" if rendered else ""
 
 

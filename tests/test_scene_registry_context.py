@@ -1,6 +1,9 @@
 """V1 buoc 4: registry chi noi ve nguoi dang noi trong scene, thay vi 1 dong
 quan he toan phim tiem vao moi scene (nguon FP chinh cua V0)."""
-from CHARACTER.registry_prompt import render_scene_registry_context
+from CHARACTER.registry_prompt import (
+    render_scene_registry_context,
+    render_speaker_registry_context,
+)
 from CHARACTER.registry_schema import Character, Registry, Relation
 
 # Hai cap than toc high => qua duoc gate cap phim cua V0.
@@ -94,3 +97,59 @@ def test_ambiguous_alias_is_dropped_rather_than_guessed():
     ctx = render_scene_registry_context(Registry(chars, RELS),
                                         {("Sheldon", "Meemaw")})
     assert ctx == ""
+
+
+# --- V2a: render_speaker_registry_context (chi can mot dau canh co mat) ---
+
+
+def test_any_fires_with_one_named_endpoint():
+    """Sheldon co ten, nguoi doi thoai chua dinh danh (None) — V1 im lang,
+    V2a phai render duoc canh cua Sheldon."""
+    names = ["Sheldon", None, "Sheldon", None]
+    assert render_scene_registry_context(REG, set()) == ""
+    ctx = render_speaker_registry_context(REG, names)
+    assert 'Sheldon calls Meemaw "bà"' in ctx
+    assert ctx.startswith("Relationship (speakers in this scene):")
+
+
+def test_any_renders_only_edges_touching_present_speakers():
+    """Meemaw cam mic -> canh Meemaw-Sheldon co mat, canh George-Sheldon
+    (ca hai deu vang) thi khong."""
+    ctx = render_speaker_registry_context(REG, ["Meemaw", None])
+    assert "Meemaw" in ctx
+    assert "George" not in ctx
+
+
+def test_any_needs_at_least_two_lines():
+    """Scene 1 dong la doc thoai — khong co doi dap thi khong can xung ho."""
+    assert render_speaker_registry_context(REG, ["Sheldon"]) == ""
+
+
+def test_any_stays_silent_without_named_speakers():
+    assert render_speaker_registry_context(REG, [None, None, None]) == ""
+
+
+def test_any_keeps_the_film_level_gate():
+    one_pair = Registry(CHARS[:2], RELS[:1])
+    assert render_speaker_registry_context(one_pair, ["Sheldon", None]) == ""
+
+
+def test_any_both_present_pairs_outrank_one_present():
+    """Vuot max_pairs thi cap du hai dau phai duoc giu lai truoc."""
+    ctx = render_speaker_registry_context(
+        REG, ["George", "Sheldon", None], max_pairs=1
+    )
+    # George & Sheldon du ca hai dau; Meemaw & Sheldon chi co mot dau.
+    assert "George" in ctx and "Meemaw" not in ctx
+
+
+def test_any_ignores_unknown_and_ambiguous_names():
+    chars = CHARS + (Character("C4", ("Sheldon",), "male", "adult", (9,)),)
+    ctx = render_speaker_registry_context(Registry(chars, RELS),
+                                          ["Sheldon", "Stranger"])
+    assert ctx == ""
+
+
+def test_any_caption_style_single_line():
+    ctx = render_speaker_registry_context(REG, ["Sheldon", None])
+    assert "<" not in ctx and "\n" not in ctx
