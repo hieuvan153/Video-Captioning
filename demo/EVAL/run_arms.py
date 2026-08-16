@@ -28,11 +28,15 @@ import time
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# arm -> (dung registry, dung speaker)
-ARMS: dict[str, tuple[bool, bool]] = {
-    "baseline": (False, False),
-    "registry": (True, False),
-    "speaker": (True, True),
+# arm -> (dung registry, dung speaker, registry_scope, file speaker)
+ARMS: dict[str, tuple[bool, bool, str | None, str]] = {
+    "baseline": (False, False, None, ""),
+    "registry": (True, False, None, ""),
+    "speaker": (True, True, "pair", "speakers.json"),      # V1: cap + ke nhau
+    "speaker_any": (True, True, "any", "speakers.json"),   # V2a: mot dau canh
+    # V2c: cung co che V1 nhung ten cluster dat o cap mua
+    # (SPEAKER/season_map.py phai chay truoc de co speakers.season.json).
+    "speaker_season": (True, True, "pair", "speakers.season.json"),
 }
 TAGGED_GLOB = "data/speaker_verify_campp_en_full/series/*/*/episodes/{m}/{m}.tagged.json"
 
@@ -68,11 +72,18 @@ def ensure_speakers(movie: str, mdir: str, repo_root: str, log_path: str,
 
 def run_arm(arm: str, mdir: str, prefix: str, speakers_path: str | None,
             log_path: str, cache_dir: str, batch_size: int) -> str | None:
-    use_registry, use_speaker = ARMS[arm]
+    use_registry, use_speaker, scope, spk_file = ARMS[arm]
     out_srt = os.path.join(mdir, f"{prefix}{arm}.srt")
     if os.path.exists(out_srt):
         print(f"  {os.path.basename(out_srt)} da co, bo qua", flush=True)
         return out_srt
+    if use_speaker and spk_file != "speakers.json":
+        # File dac thu cua arm (vd speakers.season.json) khong build tu day.
+        speakers_path = os.path.join(mdir, spk_file)
+        if not os.path.exists(speakers_path):
+            print(f"Warning: {os.path.basename(mdir)}: thieu {spk_file} "
+                  f"- bo arm {arm}", flush=True)
+            return None
     if use_speaker and not speakers_path:
         return None
     # max_seq_length giong nhau cho MOI arm: cau hinh chi khac o noi dung
@@ -90,7 +101,7 @@ def run_arm(arm: str, mdir: str, prefix: str, speakers_path: str | None,
     if use_registry:
         cmd += ["--registry_json", os.path.join(mdir, "registry.json")]
     if use_speaker:
-        cmd += ["--speaker_json", speakers_path]
+        cmd += ["--speaker_json", speakers_path, "--registry_scope", scope]
     _run(cmd, log_path)
     return out_srt
 
@@ -124,7 +135,10 @@ def main() -> None:
         mdir = os.path.join(eval_dir, movie)
         print(f"\n=== {movie} ===", flush=True)
         speakers_path = None
-        if "speaker" in args.arms:
+        # Chi build speakers.json cho arm dung file mac dinh; arm dung file
+        # rieng (speaker_season) tu kiem tra file cua no trong run_arm —
+        # khong dot GPU build mot file ma arm se khong dung.
+        if any(ARMS[a][1] and ARMS[a][3] == "speakers.json" for a in args.arms):
             speakers_path = ensure_speakers(movie, mdir, repo_root, log_path,
                                             args.cache_dir)
         for arm in args.arms:

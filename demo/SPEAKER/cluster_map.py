@@ -36,7 +36,7 @@ MAPPING_SYSTEM = (
     "- Any OTHER name inside a line is who is being addressed or discussed, "
     'NOT the speaker: a cluster saying "Adrian, I can\'t believe you" is '
     "whoever talks TO Adrian.\n"
-    "- Clusters show how many subtitle lines they cover; a one-line cluster is "
+    "- Clusters show how many dialogue lines they cover; a one-line cluster is "
     "a bit part, usually best left unknown.\n"
     '- Narration / voice-over is not dialogue: answer "unknown" unless the '
     "narrator is in the list.\n"
@@ -64,7 +64,9 @@ def build_mapping_prompt(
         lines = cluster_lines[tag][:max_lines_per_cluster]
         body = "\n".join(f"  - {ln[:_MAX_LINE_CHARS]}" for ln in lines)
         n = (line_counts or {}).get(tag)
-        head = f"{tag} ({n} subtitle lines)" if n else tag
+        # "dialogue lines": per-episode dem dong SRT, season dem chunk VAD —
+        # ca hai deu la dong thoai, nhan nay dung cho ca hai duong goi.
+        head = f"{tag} ({n} dialogue lines)" if n else tag
         vote = (hints or {}).get(tag)
         if vote:
             best = sorted(vote.items(), key=lambda kv: -kv[1])[:2]
@@ -138,11 +140,18 @@ def plan_batches(
             {t: cluster_lines[t] for t in trial}, character_names,
             captions_text, line_counts=line_counts, hints=hints,
         )
-        over = count_tokens(system, user) > token_budget
+        n_tok = count_tokens(system, user)
+        over = n_tok > token_budget
         if cur and (over or len(trial) > max_batch):
             batches.append(cur)
             cur = [tag]
         else:
+            if over:
+                # cur rong: mot cluster don da vuot nguong. Van phai gui,
+                # nhung day la vung suy giam cua Gemma-3 (bo qua ca bang
+                # chung hien nhien) — phai thay duoc trong log.
+                print(f"[speaker] Warning: {tag} mot minh {n_tok} token "
+                      f"> budget {token_budget}", flush=True)
             cur = trial
     if cur:
         batches.append(cur)

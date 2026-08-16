@@ -90,7 +90,7 @@ def test_prompt_warns_that_a_named_person_is_the_addressee():
 def test_prompt_shows_line_counts_so_bit_parts_are_recognisable():
     _, user = build_mapping_prompt({"SPK_001": ["hi"]}, NAMES,
                                    line_counts={"SPK_001": 59})
-    assert "59 subtitle lines" in user
+    assert "59 dialogue lines" in user
 
 
 def test_map_clusters_asks_about_the_biggest_clusters_first():
@@ -131,6 +131,16 @@ def test_batches_are_packed_to_stay_under_the_token_budget():
         s, u = build_mapping_prompt({t: lines[t] for t in b}, NAMES,
                                     line_counts=counts)
         assert (len(s) + len(u)) // 40 <= 30 or len(b) == 1
+
+
+def test_plan_batches_warns_when_a_single_cluster_exceeds_budget(capsys):
+    """Lo don vuot nguong van phai gui, nhung phai keu len trong log —
+    do la vung suy giam cua Gemma-3 (movie_009 unify tung suy bien im lang)."""
+    batches = plan_batches(["SPK_001"], {"SPK_001": ["x"]}, NAMES, "",
+                           lambda s, u: 5000, {}, token_budget=1000)
+    assert batches == [["SPK_001"]]
+    out = capsys.readouterr().out
+    assert "Warning" in out and "5000" in out
 
 
 def test_map_clusters_uses_the_token_budget_when_given_a_counter():
