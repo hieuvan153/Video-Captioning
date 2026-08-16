@@ -149,6 +149,26 @@ def test_parse_drops_placeholder_named_characters():
     assert reg.relations == ()  # from_id C1 da bi drop keo theo relation
 
 
+def test_parse_drops_numeric_and_single_char_names():
+    # Registry that tung sinh "1217" (ma cua hang trong Superstore) va "G" —
+    # khong dinh danh duoc ai, lai lot vao tap dong cua cluster_map va
+    # substring-match moi noi trong filter_registry_by_source.
+    raw = {
+        "characters": [
+            {"id": "C1", "names": ["1217"], "gender": "unknown",
+             "age_range": "unknown", "evidence_lines": [1]},
+            {"id": "C2", "names": ["G"], "gender": "male",
+             "age_range": "adult", "evidence_lines": [2]},
+            {"id": "C3", "names": ["7", "Glenn"], "gender": "male",
+             "age_range": "adult", "evidence_lines": [3]},  # con ten that -> giu
+        ],
+        "relations": [],
+    }
+    reg = parse_registry(raw, n_lines=10)
+    assert {c.id for c in reg.characters} == {"C3"}
+    assert reg.characters[0].names == ("Glenn",)
+
+
 def test_parse_drops_relation_with_non_lexicon_pronouns():
     # Gia tri rac quan sat trong registry that: "glenn", "anh/chị",
     # "(addressed as)" — vi_self/vi_listener phai la tu xung ho trong lexicon.

@@ -71,8 +71,13 @@ def parse_registry(raw: dict, n_lines: int) -> Registry:
     ids: set[str] = set()
     for c in raw.get("characters") or []:
         cid = str(c.get("id", "")).strip()
+        # Ten thuan so ("1217" — ma cua hang) hoac 1 ky tu ("G") khong dinh
+        # danh duoc ai; te hon, chung lot vao tap dong cua cluster_map va
+        # filter_registry_by_source ("G" substring-match moi noi).
         names = tuple(
-            str(n).strip() for n in (c.get("names") or []) if str(n).strip()
+            str(n).strip() for n in (c.get("names") or [])
+            if str(n).strip() and not str(n).strip().isdigit()
+            and len(str(n).strip()) >= 2
         )
         if not cid or not names or cid in ids:
             continue
