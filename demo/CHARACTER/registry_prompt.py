@@ -113,6 +113,49 @@ KINSHIP_TERMS: frozenset[str] = frozenset({
 })
 
 
+def _display_names(reg: Registry) -> dict[str, str]:
+    """id -> ten hien thi. Uu tien ten that: nhan vat merge tu nhieu chunk co
+    the mang alias dai tu ("I", "Speaker") dung dau danh sach."""
+    return {
+        c.id: next(
+            (n for n in c.names if n.casefold() not in PLACEHOLDER_NAMES),
+            c.names[0],
+        )
+        for c in reg.characters
+    }
+
+
+def _kinship_pairs(
+    reg: Registry, min_confidence: str
+) -> dict[tuple[str, str], list]:
+    """Gom relation than toc du confidence thanh cap khong huong {(idA, idB): [rel]}."""
+    min_rank = CONFIDENCE_LEVELS[min_confidence]
+    pairs: dict[tuple[str, str], list] = {}
+    for r in reg.relations:
+        if (CONFIDENCE_LEVELS[r.confidence] < min_rank
+                or r.vi_self not in KINSHIP_TERMS
+                or r.vi_listener not in KINSHIP_TERMS):
+            continue
+        pairs.setdefault(tuple(sorted((r.from_id, r.to_id))), []).append(r)
+    return pairs
+
+
+def _format_pairs(pairs: dict, name_of: dict[str, str], max_pairs: int) -> str:
+    def best_rank(rels) -> int:
+        return max(CONFIDENCE_LEVELS[r.confidence] for r in rels)
+
+    entries = []
+    for key, rels in sorted(pairs.items(), key=lambda kv: -best_rank(kv[1]))[:max_pairs]:
+        a, b = key
+        hints = "; ".join(
+            f'{name_of[r.from_id]} calls {name_of[r.to_id]} "{r.vi_listener}" '
+            f'and self "{r.vi_self}"'
+            for r in rels
+        )
+        entries.append(f"{name_of[a]} & {name_of[b]} - {rels[0].rel_type} ({hints})")
+    return " | ".join(entries)
+
+
 def render_registry_context(
     reg: Registry, max_pairs: int = 6, min_confidence: str = "high",
     min_kinship_pairs: int = 2,
@@ -130,42 +173,68 @@ def render_registry_context(
     lai tra "" va pipeline chay nhu baseline. Ly do: A/B do duoc edge generic
     (tôi/em, tôi/anh) leak vao sai speaker gay hai (movie_045 −0.036 F1),
     trong khi phim toan edge than toc high huong loi (movie_046 +0.046 F1).
+
+    Day la che do V0 (1 dong chung cho MOI scene). Khi da co speaker per-line,
+    dung render_scene_registry_context() thay the.
     """
     if not reg.characters:
         return ""
-    min_rank = CONFIDENCE_LEVELS[min_confidence]
-    # Uu tien ten that lam display name: nhan vat merge tu nhieu chunk co the
-    # mang alias dai tu ("I", "Speaker") dung dau danh sach.
-    name_of = {
-        c.id: next(
-            (n for n in c.names if n.casefold() not in PLACEHOLDER_NAMES),
-            c.names[0],
-        )
-        for c in reg.characters
-    }
-    pairs: dict[tuple[str, str], list] = {}
-    for r in reg.relations:
-        if (CONFIDENCE_LEVELS[r.confidence] < min_rank
-                or r.vi_self not in KINSHIP_TERMS
-                or r.vi_listener not in KINSHIP_TERMS):
-            continue
-        pairs.setdefault(tuple(sorted((r.from_id, r.to_id))), []).append(r)
+    pairs = _kinship_pairs(reg, min_confidence)
+    if len(pairs) < min_kinship_pairs:
+        return ""
+    rendered = _format_pairs(pairs, _display_names(reg), max_pairs)
+    return f"Relationship (whole-film analysis): {rendered}" if rendered else ""
+
+
+def _alias_index(reg: Registry) -> dict[str, str]:
+    """alias casefold -> character id. Alias trung o 2 nhan vat bi loai: khong
+    phan giai duoc thi im lang, con hon gan nham quan he."""
+    owner: dict[str, str | None] = {}
+    for c in reg.characters:
+        for n in c.names:
+            key = n.casefold()
+            if key in owner and owner[key] != c.id:
+                owner[key] = None
+            else:
+                owner.setdefault(key, c.id)
+    return {k: v for k, v in owner.items() if v is not None}
+
+
+def render_scene_registry_context(
+    reg: Registry, speaker_pairs, max_pairs: int = 4,
+    min_confidence: str = "high", min_kinship_pairs: int = 2,
+) -> str:
+    """Render quan he cua RIENG cac cap dang noi chuyen trong scene nay.
+
+    speaker_pairs: set cac cap ten (tu SPEAKER.inject.turn_pairs) that su co
+    luot thoai ke nhau trong scene.
+
+    Khac biet co che so voi V0 (docs/eval/error_analysis_v0.md): V0 tiem cung
+    mot dong quan he vao MOI scene, nen tu xung ho cua cap nay leak sang dong
+    cua cap khac — do duoc la nguon FP chinh (16/24 FP moi o movie_008, 20/33 o
+    movie_045). O day moi scene chi thay quan he cua nguoi dang noi trong no.
+
+    Gate min_kinship_pairs van tinh tren CA PHIM, khong phai tren scene: no la
+    quyet dinh "phim nay co dang tiem registry khong" da do duoc o V0
+    (movie_046 huong loi / movie_045 bi hai). Loc theo scene la buoc sau do.
+    """
+    if not reg.characters or not speaker_pairs:
+        return ""
+    pairs = _kinship_pairs(reg, min_confidence)
     if len(pairs) < min_kinship_pairs:
         return ""
 
-    def best_rank(rels) -> int:
-        return max(CONFIDENCE_LEVELS[r.confidence] for r in rels)
-
-    entries = []
-    for key, rels in sorted(pairs.items(), key=lambda kv: -best_rank(kv[1]))[:max_pairs]:
-        a, b = key
-        hints = "; ".join(
-            f'{name_of[r.from_id]} calls {name_of[r.to_id]} "{r.vi_listener}" '
-            f'and self "{r.vi_self}"'
-            for r in rels
-        )
-        entries.append(f"{name_of[a]} & {name_of[b]} - {rels[0].rel_type} ({hints})")
-    return "Relationship (whole-film analysis): " + " | ".join(entries)
+    id_of = _alias_index(reg)
+    wanted: set[tuple[str, str]] = set()
+    for a, b in speaker_pairs:
+        ia, ib = id_of.get(a.casefold()), id_of.get(b.casefold())
+        if ia and ib and ia != ib:
+            wanted.add(tuple(sorted((ia, ib))))
+    scoped = {k: v for k, v in pairs.items() if k in wanted}
+    if not scoped:
+        return ""
+    rendered = _format_pairs(scoped, _display_names(reg), max_pairs)
+    return f"Relationship (speakers in this scene): {rendered}" if rendered else ""
 
 
 def render_registry_block(

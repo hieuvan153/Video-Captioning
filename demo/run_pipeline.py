@@ -43,6 +43,11 @@ def parse_args():
     parser.add_argument("--use_registry", action="store_true",
                         help="Build a character-relationship registry (step 5b) "
                              "and inject it into the Gemma refinement prompt.")
+    parser.add_argument("--speaker_tagged_json", type=str, default=None,
+                        help="Existing CAM++ output (movie_XXX.tagged.json). "
+                             "Enables step 5c: per-line speaker attribution, "
+                             "[SPEAKER: X] tags, and per-scene registry scoping. "
+                             "Requires --use_registry.")
     return parser.parse_args()
 
 def free_gpu_memory():
@@ -226,7 +231,32 @@ def step5b_build_registry(english_srt_path, vlm_json_path, registry_json_path, c
     free_gpu_memory()
     return registry_json_path
 
-def step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_path, cache_dir, llm_batch_size, registry_json_path=None):
+def step5c_build_speakers(tagged_json_path, english_srt_path, registry_json_path,
+                          vlm_json_path, speaker_json_path, cache_dir):
+    print("\n=== STEP 5c: Speaker Attribution (CAM++ align + naming) ===", flush=True)
+    if os.path.exists(speaker_json_path):
+        print(f"Speaker JSON already exists: {speaker_json_path}. Skipping.", flush=True)
+        return speaker_json_path
+
+    sys.path.append(ROOT_DIR)
+    from SPEAKER import build_speakers
+
+    build_speakers.run(
+        tagged_json_path=tagged_json_path,
+        en_srt_path=english_srt_path,
+        registry_json_path=registry_json_path,
+        output_json_path=speaker_json_path,
+        vlm_json_path=vlm_json_path,
+        cache_dir=cache_dir,
+    )
+
+    print("Unloading Speaker Naming Model...", flush=True)
+    if "SPEAKER.build_speakers" in sys.modules:
+        del sys.modules["SPEAKER.build_speakers"]
+    free_gpu_memory()
+    return speaker_json_path
+
+def step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_path, cache_dir, llm_batch_size, registry_json_path=None, speaker_json_path=None):
     print("\n=== STEP 6: Running LLM Refinement (Gemma3) ===", flush=True)
     if os.path.exists(output_srt_path):
         print(f"Refined Vietnamese SRT already exists: {output_srt_path}. Skipping LLM.", flush=True)
@@ -246,6 +276,7 @@ def step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_pa
         max_new_tokens=1024,
         llm_batch_size=llm_batch_size,
         registry_json_path=registry_json_path,
+        speaker_json_path=speaker_json_path,
     )
 
     # Unload Gemma3 model from VRAM
@@ -275,6 +306,7 @@ def main():
     rough_srt_path = os.path.join(args.output_dir, f"{base_name}.(Tiếng Việt_dich_tho).srt")
     output_srt_path = os.path.join(args.output_dir, f"{base_name}.(Tiếng Việt_tinh_chinh).srt")
     registry_json_path = os.path.join(args.output_dir, f"{base_name}.registry.json")
+    speaker_json_path = os.path.join(args.output_dir, f"{base_name}.speakers.json")
 
     t_start = time.time()
     durations = {}
@@ -311,17 +343,30 @@ def main():
                               registry_json_path, args.cache_dir)
         durations["Step 5b: Character Registry"] = time.time() - t0
 
+    # Step 5c: Speaker attribution (optional; needs the registry as its name set)
+    use_speaker = bool(args.speaker_tagged_json) and args.use_registry
+    if args.speaker_tagged_json and not args.use_registry:
+        print("Warning: --speaker_tagged_json needs --use_registry (the registry "
+              "supplies the closed set of names); skipping step 5c.", flush=True)
+    if use_speaker:
+        t0 = time.time()
+        step5c_build_speakers(args.speaker_tagged_json, english_srt_path,
+                              registry_json_path, vlm_json_path,
+                              speaker_json_path, args.cache_dir)
+        durations["Step 5c: Speaker Attribution"] = time.time() - t0
+
     # Step 6: Run LLM refinement
     t0 = time.time()
     step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_path, args.cache_dir, args.llm_batch_size,
-                  registry_json_path=registry_json_path if args.use_registry else None)
+                  registry_json_path=registry_json_path if args.use_registry else None,
+                  speaker_json_path=speaker_json_path if use_speaker else None)
     durations["Step 6: LLM Refinement (Gemma3)"] = time.time() - t0
 
     total_time = time.time() - t_start
     print(f"\n=========================================")
-    print(f"🎉 Pipeline completed successfully in {total_time/60:.2f} minutes!")
+    print(f"Pipeline completed successfully in {total_time/60:.2f} minutes!")
     print(f"=========================================")
-    print("📊 Step Execution Time Breakdown:")
+    print("Step Execution Time Breakdown:")
     for step_name, elapsed in durations.items():
         print(f" - {step_name}: {elapsed/60:.2f} min ({elapsed:.1f}s)")
     print(f"=========================================", flush=True)

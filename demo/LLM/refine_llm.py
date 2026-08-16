@@ -48,6 +48,10 @@ def parse_args():
     parser.add_argument("--registry_json", type=str, default=None,
                         help="Optional character-relationship registry JSON "
                              "(built by CHARACTER/build_registry.py).")
+    parser.add_argument("--speaker_json", type=str, default=None,
+                        help="Optional per-line speaker JSON (built by "
+                             "SPEAKER/build_speakers.py). Enables [SPEAKER: X] "
+                             "tags and per-scene registry scoping.")
     return parser.parse_args()
 
 
@@ -107,7 +111,7 @@ def _generate_batch_safe(model, tokenizer, ids_list, max_new_tokens,
 
     if len(ids_list) > 1:
         mid = (len(ids_list) + 1) // 2
-        print(f"⚠️ CUDA OOM (batch={len(ids_list)}) → retry as "
+        print(f"CUDA OOM (batch={len(ids_list)}) -> retry as "
               f"{mid}+{len(ids_list) - mid}", flush=True)
         return (_generate_batch_safe(model, tokenizer, ids_list[:mid],
                                      max_new_tokens, oom_wait_s, oom_max_waits)
@@ -115,7 +119,7 @@ def _generate_batch_safe(model, tokenizer, ids_list, max_new_tokens,
                                        max_new_tokens, oom_wait_s, oom_max_waits))
 
     for n in range(oom_max_waits):
-        print(f"⚠️ CUDA OOM (batch=1), waiting {oom_wait_s}s for shared GPU "
+        print(f"CUDA OOM (batch=1), waiting {oom_wait_s}s for shared GPU "
               f"({n + 1}/{oom_max_waits})", flush=True)
         time.sleep(oom_wait_s)
         torch.cuda.empty_cache()
@@ -137,12 +141,13 @@ def refine_subtitles(
     max_seq_length=2048,
     max_new_tokens=1024,
     llm_batch_size=8,
-    registry_json_path=None
+    registry_json_path=None,
+    speaker_json_path=None
 ):
     if cache_dir is None:
         cache_dir = os.path.join(ROOT_DIR, "cache")
-    # ── Read inputs ──────────────────────────────────────────────────────────
-    print("📖 Reading subtitle files...")
+    # -- Read inputs ----------------------------------------------------------
+    print("Reading subtitle files...")
     with open(en_srt_path,    "r", encoding="utf-8") as f:
         en_subs   = list(srt.parse(f.read()))
     with open(vinai_srt_path, "r", encoding="utf-8") as f:
@@ -159,23 +164,39 @@ def refine_subtitles(
     out_subs = [srt.Subtitle(index=s.index, start=s.start, end=s.end, content="")
                 for s in en_subs]
 
-    print(f"📂 Reading scene captions: {vlm_json_path}")
+    print(f"Reading scene captions: {vlm_json_path}")
     with open(vlm_json_path, "r", encoding="utf-8") as f:
         vlm_scenes = json.load(f)
 
-    # ── Optional character registry ──────────────────────────────────────────
+    # -- Optional per-line speaker attribution --------------------------------
+    # Co speaker thi doi CA CO CHE registry: thay vi 1 dong quan he chung cho
+    # moi scene (V0), moi scene chi thay quan he cua nguoi dang noi trong no.
+    if ROOT_DIR not in sys.path:
+        sys.path.insert(0, ROOT_DIR)  # ROOT_DIR = demo/, chua CHARACTER + SPEAKER
+    speaker_names = None
+    if speaker_json_path and os.path.exists(speaker_json_path):
+        from SPEAKER.inject import load_speakers, tag_english_lines, turn_pairs
+        speaker_names = load_speakers(speaker_json_path, len(en_subs))
+        n_named = sum(1 for n in speaker_names if n)
+        print(f"Speakers loaded: {speaker_json_path} "
+              f"({n_named}/{len(speaker_names)} dong co ten)", flush=True)
+
+    # -- Optional character registry ------------------------------------------
     # Tiem VAO trong <Scene Context> theo dung style caption VLM ("3. Relationship:
     # ..."); block/section la ngoai scene context lam adapter suy bien.
+    registry = None
     registry_context = ""
     if registry_json_path and os.path.exists(registry_json_path):
-        import sys
-        if ROOT_DIR not in sys.path:
-            sys.path.insert(0, ROOT_DIR)  # ROOT_DIR = demo/, chua package CHARACTER
-        from CHARACTER.registry_prompt import render_registry_context
+        from CHARACTER.registry_prompt import (
+            render_registry_context,
+            render_scene_registry_context,
+        )
         from CHARACTER.registry_schema import load_registry
-        registry_context = render_registry_context(load_registry(registry_json_path))
-        if registry_context:
-            print(f"📇 Character registry loaded: {registry_json_path}", flush=True)
+        registry = load_registry(registry_json_path)
+        if speaker_names is None:
+            registry_context = render_registry_context(registry)
+        if registry.characters:
+            print(f"Character registry loaded: {registry_json_path}", flush=True)
 
     scenes_data = []
     for idx, sc in enumerate(vlm_scenes):
@@ -186,29 +207,48 @@ def refine_subtitles(
             "indices":    []
         })
 
-    # ── Assign subtitles → scenes ────────────────────────────────────────────
+    # -- Assign subtitles → scenes --------------------------------------------
     for i, sub in enumerate(en_subs):
         mid = (sub.start.total_seconds() + sub.end.total_seconds()) / 2.0
         si  = find_best_scene(mid, scenes_data)
         if si != -1:
             scenes_data[si]["indices"].append(i)
 
-    # ── Build prompt list ────────────────────────────────────────────────────
-    prompts = []   # list of {"indices", "context", "raw_en", "vinai_sub"}
+    # -- Build prompt list ----------------------------------------------------
+    prompts = []   # list of {"indices", "context", "raw_en", "vinai_sub", "registry_context"}
+    n_scene_reg = 0
     for sc in scenes_data:
         if not sc["indices"]:
             continue
         cap = sc["caption"]
         chunk = sc["indices"]
+        en_lines = [en_subs[j].content for j in chunk]
+        scene_reg = registry_context
+
+        if speaker_names is not None:
+            line_names = [speaker_names[j] for j in chunk]
+            # Tag phia EN: so dong tieng Viet output khong doi.
+            en_lines = tag_english_lines(en_lines, line_names)
+            scene_reg = (
+                render_scene_registry_context(registry, turn_pairs(line_names))
+                if registry is not None else ""
+            )
+            if scene_reg:
+                n_scene_reg += 1
+
         prompts.append({
             "indices":   chunk,
             "context":   cap,
-            "raw_en":    "\n".join(en_subs[j].content    for j in chunk),
+            "raw_en":    "\n".join(en_lines),
             "vinai_sub": "\n".join(vinai_subs[j].content for j in chunk),
+            "registry_context": scene_reg,
         })
-    print(f"✓ {len(prompts)} scene-prompt chunks to process.")
+    print(f"{len(prompts)} scene-prompt chunks to process.")
+    if speaker_names is not None:
+        print(f"Per-scene registry rendered for {n_scene_reg}/{len(prompts)} "
+              f"scenes.", flush=True)
 
-    # ── Load model ────────────────────────────────────────────────────────────
+    # -- Load model ------------------------------------------------------------
     print(f"Loading model via Unsloth 4-bit: {adapter_model_name}...")
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=adapter_model_name,
@@ -237,13 +277,13 @@ def refine_subtitles(
         "    Keep meaning and structure unchanged.\n"
         "    Output only the corrected Vietnamese translation, line by line.   "
     )
-    # ── Pre-tokenize all prompts ─────────────────────────────────────────────
+    # -- Pre-tokenize all prompts ---------------------------------------------
     print("Tokenizing all prompts...")
     all_input_ids = []
     for item in prompts:
         scene_ctx = item['context']
-        if registry_context:
-            scene_ctx = f"{scene_ctx}\n    {registry_context}"
+        if item['registry_context']:
+            scene_ctx = f"{scene_ctx}\n    {item['registry_context']}"
         full_sys = (f"{base_system}\n"
                     f"    <Scene Context>\n    {scene_ctx}\n    </Scene Context>")
         user_msg = (f"<English Dialogue>\n{item['raw_en']}\n</English Dialogue>\n"
@@ -265,7 +305,7 @@ def refine_subtitles(
     assert len(all_input_ids) == len(prompts)
     print("Tokenization done. Starting BATCH inference...")
 
-    # ── Batch inference ───────────────────────────────────────────────────────
+    # -- Batch inference -------------------------------------------------------
     t_total = time.time()
     debug_scenes = []
     batch_size = llm_batch_size
@@ -296,7 +336,7 @@ def refine_subtitles(
                 if is_degenerate_line(lines_out[k]):
                     degenerate_ks.add(k)
                     s_idx = item["indices"][k]
-                    print(f"⚠️ [guard] degenerate output at subtitle "
+                    print(f"[guard] degenerate output at subtitle "
                           f"{en_subs[s_idx].index}: {lines_out[k][:60]!r}… "
                           f"-> rough fallback", flush=True)
                     lines_out[k] = vinai_subs[s_idx].content
@@ -333,13 +373,14 @@ def refine_subtitles(
             debug_scenes.append({
                 "scene_index": idx + i,
                 "scene_caption": item["context"],
+                "registry_context": item["registry_context"],
                 "translations": scene_translations
             })
 
     total = time.time() - t_total
-    print(f"\n✅ Done in {total/60:.1f} min")
+    print(f"\nDone in {total/60:.1f} min")
 
-    # ── Write output ──────────────────────────────────────────────────────────
+    # -- Write output ----------------------------------------------------------
     for i, sub in enumerate(out_subs):
         sub.start = en_subs[i].start
         sub.end   = en_subs[i].end
@@ -349,13 +390,13 @@ def refine_subtitles(
     os.makedirs(os.path.dirname(os.path.abspath(output_srt_path)), exist_ok=True)
     with open(output_srt_path, "w", encoding="utf-8") as f:
         f.write(srt.compose(out_subs))
-    print(f"💾 Saved: {output_srt_path}")
+    print(f"Saved: {output_srt_path}")
 
     # Save debug information as JSON
     output_json = output_srt_path + ".json"
     with open(output_json, "w", encoding="utf-8") as f:
         json.dump(debug_scenes, f, ensure_ascii=False, indent=2)
-    print(f"💾 Saved debug JSON: {output_json}")
+    print(f"Saved debug JSON: {output_json}")
 
 
 def main():
@@ -371,6 +412,7 @@ def main():
         max_new_tokens=args.max_new_tokens,
         llm_batch_size=args.llm_batch_size,
         registry_json_path=args.registry_json,
+        speaker_json_path=args.speaker_json,
     )
 
 
