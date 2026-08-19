@@ -1,0 +1,99 @@
+{
+  "protocol": "scene-level (thesis 4.1/4.3.5)",
+  "movies": {
+    "movie_081": {
+      "rough.srt": {
+        "bleu": 22.05,
+        "n_scenes": 27,
+        "comet": 0.7645
+      },
+      "v1b_baseline.srt": {
+        "bleu": 22.86,
+        "n_scenes": 27,
+        "comet": 0.781
+      },
+      "v1b_speaker.srt": {
+        "bleu": 22.5,
+        "n_scenes": 27,
+        "comet": 0.7804
+      }
+    },
+    "movie_104": {
+      "rough.srt": {
+        "bleu": 36.9,
+        "n_scenes": 28,
+        "comet": 0.8131
+      },
+      "v1b_baseline.srt": {
+        "bleu": 37.49,
+        "n_scenes": 28,
+        "comet": 0.8263
+      },
+      "v1b_speaker.srt": {
+        "bleu": 37.86,
+        "n_scenes": 28,
+        "comet": 0.8314
+      }
+    },
+    "movie_124": {
+      "rough.srt": {
+        "bleu": 28.18,
+        "n_scenes": 26,
+        "comet": 0.7822
+      },
+      "v1b_baseline.srt": {
+        "bleu": 30.16,
+        "n_scenes": 26,
+        "comet": 0.7939
+      },
+      "v1b_speaker.srt": {
+        "bleu": 29.66,
+        "n_scenes": 26,
+        "comet": 0.7928
+      }
+    },
+    "movie_170": {
+      "rough.srt": {
+        "bleu": 35.67,
+        "n_scenes": 28,
+        "comet": 0.7875
+      },
+      "v1b_baseline.srt": {
+        "bleu": 35.82,
+        "n_scenes": 28,
+        "comet": 0.7984
+      },
+      "v1b_speaker.srt": {
+        "bleu": 33.82,
+        "n_scenes": 28,
+        "comet": 0.7868
+      }
+    }
+  },
+  "overall": {
+    "rough.srt": {
+      "bleu": 31.01,
+      "comet": 0.7871,
+      "pronoun_precision": 0.392,
+      "pronoun_recall": 0.6158,
+      "pronoun_f1": 0.4791,
+      "n_scenes": 109
+    },
+    "v1b_baseline.srt": {
+      "bleu": 32.14,
+      "comet": 0.8002,
+      "pronoun_precision": 0.503,
+      "pronoun_recall": 0.637,
+      "pronoun_f1": 0.5621,
+      "n_scenes": 109
+    },
+    "v1b_speaker.srt": {
+      "bleu": 31.46,
+      "comet": 0.7981,
+      "pronoun_precision": 0.4672,
+      "pronoun_recall": 0.6145,
+      "pronoun_f1": 0.5308,
+      "n_scenes": 109
+    }
+  }
+}

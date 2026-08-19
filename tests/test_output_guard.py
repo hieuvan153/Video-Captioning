@@ -32,3 +32,27 @@ def test_keeps_long_but_diverse_line():
             "khu phố mới, bao gồm ngân sách, nhân sự, và lịch trình từng "
             "giai đoạn cụ thể cho quý sau.")
     assert not is_degenerate_line(line)
+
+
+def test_detects_dash_only_line():
+    # scene sap nguyen khoi thanh cac dong "- -" (eval_e5 movie_336, 39.9% dong)
+    for bad in ("-", "- -", "--", "."):
+        assert is_degenerate_line(bad)
+
+
+def test_detects_non_latin_leakage():
+    # token Bengali leak o movie_312 dong [0]
+    assert is_degenerate_line("SorryCode:bill_of_materials \u09aa\u09cd\u09b0")
+
+
+def test_detects_more_non_latin_scripts():
+    # cac he chu bo sung sau review: Thai, Hy Lap, Hebrew, fullwidth
+    assert is_degenerate_line("\u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35")   # Thai
+    assert is_degenerate_line("\u03b1\u03b2\u03b3 test")                   # Hy Lap
+    assert is_degenerate_line("\u05e9\u05dc\u05d5\u05dd")                 # Hebrew
+    assert is_degenerate_line("\uff2f\uff2b nha")                           # fullwidth OK
+
+
+def test_keeps_line_with_leading_dialogue_dash():
+    # gach dau thoai hop le khong duoc coi la suy bien
+    assert not is_degenerate_line("- Sao ông lại ở đây?")

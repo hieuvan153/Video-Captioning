@@ -23,6 +23,7 @@ import sys
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 from LLM.output_guard import is_degenerate_line
+from LLM.scene_assign import find_best_scene, split_chunk
 
 # Login to Hugging Face (token from env; needed only if the adapter repo is private)
 _hf_token = os.environ.get("HF_TOKEN")
@@ -52,23 +53,21 @@ def parse_args():
                         help="Optional per-line speaker JSON (built by "
                              "SPEAKER/build_speakers.py). Enables [SPEAKER: X] "
                              "tags and per-scene registry scoping.")
+    parser.add_argument("--max_scene_lines", type=int, default=0,
+                        help="Chia scene dai hon N dong thanh cac manh <= N "
+                             "truoc khi dung prompt (0 = tat). Data train v4 "
+                             "toi da 32 dong/sample.")
     parser.add_argument("--registry_scope", type=str, default="pair",
-                        choices=["pair", "any"],
+                        choices=["pair", "any", "pair_rel", "pair_addr"],
                         help="Scene-registry firing rule: 'pair' needs both "
                              "edge endpoints speaking adjacently (V1), 'any' "
-                             "needs one named endpoint in the scene (V2a).")
+                             "needs one named endpoint in the scene (V2a), "
+                             "'pair_rel' is 'pair' plus vocative-mined address "
+                             "edges from speakers.json (V3/C.b), 'pair_addr' "
+                             "widens edge TYPES to directed-listener edges "
+                             "(vi_listener kinship, vi_self any) under the "
+                             "same pair gating (V3/C.a).")
     return parser.parse_args()
-
-
-def find_best_scene(midpoint, scenes):
-    """Strict scene matching by midpoint timestamp (no nearest neighbor fallback)."""
-    for idx, sc in enumerate(scenes):
-        s, e = sc.get('start_time'), sc.get('end_time')
-        if s is None or e is None:
-            continue
-        if s <= midpoint <= e:
-            return idx
-    return -1
 
 
 def _pad_and_generate(model, tokenizer, ids_list, max_new_tokens):
@@ -148,7 +147,8 @@ def refine_subtitles(
     llm_batch_size=8,
     registry_json_path=None,
     speaker_json_path=None,
-    registry_scope="pair"
+    registry_scope="pair",
+    max_scene_lines=0
 ):
     if cache_dir is None:
         cache_dir = os.path.join(ROOT_DIR, "cache")
@@ -180,12 +180,19 @@ def refine_subtitles(
     if ROOT_DIR not in sys.path:
         sys.path.insert(0, ROOT_DIR)  # ROOT_DIR = demo/, chua CHARACTER + SPEAKER
     speaker_names = None
+    address_edges: list[dict] = []
     if speaker_json_path and os.path.exists(speaker_json_path):
-        from SPEAKER.inject import load_speakers, tag_english_lines, turn_pairs
+        from SPEAKER.inject import (
+            load_address_edges, load_speakers, tag_english_lines, turn_pairs,
+        )
         speaker_names = load_speakers(speaker_json_path, len(en_subs))
         n_named = sum(1 for n in speaker_names if n)
         print(f"Speakers loaded: {speaker_json_path} "
               f"({n_named}/{len(speaker_names)} dong co ten)", flush=True)
+        if registry_scope == "pair_rel":
+            address_edges = load_address_edges(speaker_json_path)
+            print(f"Address edges: {len(address_edges)} canh xung ho tu "
+                  f"vocative", flush=True)
 
     # -- Optional character registry ------------------------------------------
     # Tiem VAO trong <Scene Context> theo dung style caption VLM ("3. Relationship:
@@ -224,39 +231,49 @@ def refine_subtitles(
     # -- Build prompt list ----------------------------------------------------
     prompts = []   # list of {"indices", "context", "raw_en", "vinai_sub", "registry_context"}
     n_scene_reg = 0
+    assigned_idx = set()   # index da vao prompt nao do; con lai -> rough khi ghi file
     for sc in scenes_data:
         if not sc["indices"]:
             continue
         cap = sc["caption"]
-        chunk = sc["indices"]
-        en_lines = [en_subs[j].content for j in chunk]
-        scene_reg = registry_context
+        for chunk in split_chunk(sc["indices"], max_scene_lines):
+            assigned_idx.update(chunk)
+            en_lines = [en_subs[j].content for j in chunk]
+            scene_reg = registry_context
 
-        if speaker_names is not None:
-            line_names = [speaker_names[j] for j in chunk]
-            # Tag phia EN: so dong tieng Viet output khong doi.
-            en_lines = tag_english_lines(en_lines, line_names)
-            if registry is None:
-                scene_reg = ""
-            elif registry_scope == "any":
-                scene_reg = render_speaker_registry_context(registry, line_names)
-            else:
-                scene_reg = render_scene_registry_context(
-                    registry, turn_pairs(line_names))
-            if scene_reg:
-                n_scene_reg += 1
+            if speaker_names is not None:
+                line_names = [speaker_names[j] for j in chunk]
+                # Tag phia EN: so dong tieng Viet output khong doi.
+                en_lines = tag_english_lines(en_lines, line_names)
+                if registry is None:
+                    scene_reg = ""
+                elif registry_scope == "any":
+                    scene_reg = render_speaker_registry_context(registry, line_names)
+                elif registry_scope == "pair_rel":
+                    scene_reg = render_scene_registry_context(
+                        registry, turn_pairs(line_names),
+                        extra_edges=address_edges)
+                elif registry_scope == "pair_addr":
+                    scene_reg = render_scene_registry_context(
+                        registry, turn_pairs(line_names),
+                        include_address_edges=True)
+                else:
+                    scene_reg = render_scene_registry_context(
+                        registry, turn_pairs(line_names))
+                if scene_reg:
+                    n_scene_reg += 1
 
-        prompts.append({
-            "indices":   chunk,
-            "context":   cap,
-            "raw_en":    "\n".join(en_lines),
-            "vinai_sub": "\n".join(vinai_subs[j].content for j in chunk),
-            "registry_context": scene_reg,
-        })
+            prompts.append({
+                "indices":   chunk,
+                "context":   cap,
+                "raw_en":    "\n".join(en_lines),
+                "vinai_sub": "\n".join(vinai_subs[j].content for j in chunk),
+                "registry_context": scene_reg,
+            })
     print(f"{len(prompts)} scene-prompt chunks to process.")
     if speaker_names is not None:
         print(f"Per-scene registry rendered for {n_scene_reg}/{len(prompts)} "
-              f"scenes.", flush=True)
+              f"chunks.", flush=True)
 
     # -- Load model ------------------------------------------------------------
     print(f"Loading model via Unsloth 4-bit: {adapter_model_name}...")
@@ -274,18 +291,16 @@ def refine_subtitles(
         tokenizer.pad_token = tokenizer.eos_token
 
     base_system = (
-        "You are a professional Vietnamese subtitle editor for a movie.\n"
-        "    Given three sections:\n"
-        "        <Scene Context> — A description of the characters, their relationships "
-        "(e.g., lovers, enemies, boss/employee), and the mood of the scene.\n"
-        "        <English Dialogue> — original English lines.\n"
-        "        <Rough Vietnamese Translation> — rough Vietnamese translation with possible "
-        "tone or pronoun issues.\n"
-        "    Use the English dialogue only to understand speaker context.\n"
-        "    Fix the Vietnamese translation so that pronouns, tone, and formality are natural "
-        "and consistent with the context.\n"
-        "    Keep meaning and structure unchanged.\n"
-        "    Output only the corrected Vietnamese translation, line by line.   "
+        """You are a professional Vietnamese subtitle editor for a movie.
+Given three sections:
+<Scene Context> — A description of the characters, their relationships (e.g., lovers, enemies, boss/employee), and the mood of the scene. 
+<English Dialogue> — original English lines.
+<Rough Vietnamese Translation> — rough Vietnamese translation with possible tone or pronoun issues.
+Use the English dialogue only to understand speaker context.
+Fix the Vietnamese translation so that pronouns, tone, and formality are natural and consistent with the context.
+Keep meaning and structure unchanged.
+Output only the corrected Vietnamese translation, line by line. 
+"""
     )
     # -- Pre-tokenize all prompts ---------------------------------------------
     print("Tokenizing all prompts...")
@@ -293,15 +308,18 @@ def refine_subtitles(
     for item in prompts:
         scene_ctx = item['context']
         if item['registry_context']:
-            scene_ctx = f"{scene_ctx}\n    {item['registry_context']}"
-        full_sys = (f"{base_system}\n"
-                    f"    <Scene Context>\n    {scene_ctx}\n    </Scene Context>")
-        user_msg = (f"<English Dialogue>\n{item['raw_en']}\n</English Dialogue>\n"
+            scene_ctx = f"{scene_ctx}\n{item['registry_context']}"
+        # <Scene Context> phai nam trong USER message (nhu infer_LLM.py goc):
+        # dat trong system lam adapter suy bien nguyen scene >= 28 dong thanh
+        # "- -" (docs/eval/degeneration_e5.md), trong khi cung adapter voi
+        # context o user chay 307 scene (max 92 dong) khong loi.
+        user_msg = (f"<Scene Context>\n{scene_ctx}\n</Scene Context>\n"
+                    f"<English Dialogue>\n{item['raw_en']}\n</English Dialogue>\n"
                     f"<Rough Vietnamese Translation>\n{item['vinai_sub']}\n"
                     f"</Rough Vietnamese Translation>")
 
         messages = [
-            {"role": "system", "content": [{"type": "text", "text": full_sys}]},
+            {"role": "system", "content": [{"type": "text", "text": base_system}]},
             {"role": "user",   "content": [{"type": "text", "text": user_msg}]},
         ]
 
@@ -339,6 +357,7 @@ def refine_subtitles(
 
             lines_out = [l.strip() for l in decoded.split("\n") if l.strip()]
             n_src = len(item["indices"])
+            n_model_lines = len(lines_out)   # truoc pad/cat: lech vs n_src => chunk nghi van
 
             # Guardrail: dong suy bien (lap n-gram) -> fallback dong rough.
             degenerate_ks = set()
@@ -383,6 +402,8 @@ def refine_subtitles(
                 "scene_index": idx + i,
                 "scene_caption": item["context"],
                 "registry_context": item["registry_context"],
+                "n_src": n_src,
+                "n_model_lines": n_model_lines,
                 "translations": scene_translations
             })
 
@@ -400,6 +421,14 @@ def refine_subtitles(
     with open(output_srt_path, "w", encoding="utf-8") as f:
         f.write(srt.compose(out_subs))
     print(f"Saved: {output_srt_path}")
+
+    # Dong khong thuoc scene nao (vd truoc scene dau) -> rough, ghi lai de audit.
+    unassigned = [en_subs[i].index for i in range(len(en_subs))
+                  if i not in assigned_idx]
+    if unassigned:
+        debug_scenes.append({"unassigned_indices": unassigned})
+        print(f"[warn] {len(unassigned)} dong khong thuoc scene nao "
+              f"-> giu rough: {unassigned[:10]}", flush=True)
 
     # Save debug information as JSON
     output_json = output_srt_path + ".json"
@@ -423,6 +452,7 @@ def main():
         registry_json_path=args.registry_json,
         speaker_json_path=args.speaker_json,
         registry_scope=args.registry_scope,
+        max_scene_lines=args.max_scene_lines,
     )
 
 

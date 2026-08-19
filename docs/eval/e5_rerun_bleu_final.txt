@@ -1,0 +1,6 @@
+rough                                         n=10  raw 38.24  nopunc 37.73  custom 40.06
+v1b_baseline                                  n=10  raw 38.96  nopunc 38.45  custom 40.81
+v1b_speaker                                   n=10  raw 38.32  nopunc 37.62  custom 40.15
+output_sentence_vinai                         n=10  raw 38.23  nopunc 37.72  custom 40.05
+output_pipeline_no_context                    n=10  raw 37.40  nopunc 36.82  custom 39.19
+output_full_pipeline                          n=10  raw 38.94  nopunc 38.36  custom 40.76
