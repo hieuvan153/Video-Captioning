@@ -194,3 +194,29 @@ def test_parse_drops_relation_with_non_lexicon_pronouns():
     }
     reg = parse_registry(ok, n_lines=100)
     assert len(reg.relations) == 1 and reg.relations[0].vi_self == "em"
+
+
+def test_merge_ignores_placeholder_aliases():
+    # Bug 2026-08-17 (movie_009 C38): "You" nam trong names cua hai nhan vat
+    # khac nhau (parse_registry chi bo nhan vat TOAN placeholder, nhan vat
+    # ten-that-kem-placeholder van giu alias placeholder) -> union-find gop
+    # Steve+Glenn+... thanh mot mega-node, relation nhiem ban theo.
+    raw1 = {
+        "characters": [
+            {"id": "C1", "names": ["Steve", "You"], "gender": "male",
+             "age_range": "adult", "evidence_lines": [1]},
+        ],
+        "relations": [],
+    }
+    raw2 = {
+        "characters": [
+            {"id": "C1", "names": ["Glenn", "You"], "gender": "male",
+             "age_range": "adult", "evidence_lines": [2]},
+        ],
+        "relations": [],
+    }
+    merged = merge_registries([parse_registry(raw1, n_lines=10),
+                               parse_registry(raw2, n_lines=10)])
+    assert len(merged.characters) == 2
+    for c in merged.characters:
+        assert not ({"Steve", "Glenn"} <= set(c.names))

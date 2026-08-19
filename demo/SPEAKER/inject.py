@@ -60,8 +60,15 @@ def speakers_to_json(
     line_tags: list[str | None],
     mapping: dict[str, str],
     stats=None,
+    address_edges: list[dict] | None = None,
 ) -> dict:
-    """Format file <base>.speakers.json — mot entry moi dong SRT, dung thu tu."""
+    """Format file <base>.speakers.json — mot entry moi dong SRT, dung thu tu.
+
+    line_tags co the chua tag tong hop "LABEL::Ten" (vung chunk duoc nhan kich
+    ban dinh danh truc tiep, xem SPEAKER/label_override.py) ben canh SPK_xxx.
+    address_edges: canh xung ho dao tu vocative (SPEAKER/vocative_edges.py) —
+    tro voi scope "pair", chi scope "pair_rel" doc no.
+    """
     payload = {
         "n_lines": len(names),
         "speakers": names,
@@ -69,6 +76,8 @@ def speakers_to_json(
         "clusters": dict(sorted(mapping.items())),
         "n_named": sum(1 for n in names if n),
     }
+    if address_edges is not None:
+        payload["address_edges"] = address_edges
     if stats is not None:
         payload["align_stats"] = {
             "n_lines": stats.n_lines,
@@ -98,6 +107,14 @@ def load_speakers(path: str, n_lines: int) -> list[str | None]:
             f"speakers.json duoc build tu file SRT khac?"
         )
     return [n.strip() if isinstance(n, str) and n.strip() else None for n in raw]
+
+
+def load_address_edges(path: str) -> list[dict]:
+    """Doc canh xung ho tu speakers.json; file cu khong co truong nay -> []."""
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    edges = data.get("address_edges")
+    return edges if isinstance(edges, list) else []
 
 
 def save_speakers(path: str, payload: dict) -> str:

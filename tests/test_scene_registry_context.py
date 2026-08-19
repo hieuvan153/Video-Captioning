@@ -153,3 +153,64 @@ def test_any_ignores_unknown_and_ambiguous_names():
 def test_any_caption_style_single_line():
     ctx = render_speaker_registry_context(REG, ["Sheldon", None])
     assert "<" not in ctx and "\n" not in ctx
+
+
+# --- V3/C.a: include_address_edges (chi doi vi_listener thuoc KINSHIP_TERMS) ---
+
+
+def test_address_scope_allows_generic_self_with_directed_listener():
+    """Edge "tôi"/"anh" bi loai o che do kinship (ca hai dau phai than toc)
+    nhung duoc phep khi include_address_edges: nguoi nghe van co huong."""
+    chars = (Character("C1", ("Amy",), "female", "adult", (1,)),
+             Character("C2", ("Jonah",), "male", "adult", (2,)),
+             Character("C3", ("Glenn",), "male", "adult", (3,)),)
+    rels = (Relation("C1", "C2", "colleague", "tôi", "anh", "high", (1,)),
+            Relation("C3", "C1", "boss", "tôi", "cô", "high", (3,)),)
+    reg = Registry(chars, rels)
+    assert render_scene_registry_context(reg, {("Amy", "Jonah")}) == ""
+    ctx = render_scene_registry_context(reg, {("Amy", "Jonah")},
+                                        include_address_edges=True)
+    assert 'Amy calls Jonah "anh"' in ctx
+    assert "Glenn" not in ctx           # cap khong noi trong scene nay
+
+
+# --- V3/C.b: extra_edges (canh xung ho dao tu vocative) ---
+
+_EXTRA = [{"from_name": "George", "to_name": "Meemaw",
+           "rel_type": "address:grandma", "vi_self": "cháu",
+           "vi_listener": "bà", "confidence": "high", "votes": 3}]
+
+
+def test_extra_address_edges_render_only_under_turn_pair_gating():
+    """Canh vocative George->Meemaw chi hien khi chinh cap do thoai ke nhau."""
+    ctx = render_scene_registry_context(REG, {("George", "Meemaw")},
+                                        extra_edges=_EXTRA)
+    assert 'George calls Meemaw "bà"' in ctx
+    other = render_scene_registry_context(REG, {("Sheldon", "Meemaw")},
+                                          extra_edges=_EXTRA)
+    assert "George" not in other and "Meemaw" in other
+    assert render_scene_registry_context(REG, set(), extra_edges=_EXTRA) == ""
+
+
+def test_extra_edges_count_toward_the_film_level_gate():
+    """Gate hoi "phim co bang chung xung ho co huong dang tin khong" — canh
+    vocative dat nguong phieu la mot nguon bang chung nhu the."""
+    one_pair = Registry(CHARS, RELS[:1])    # 1 cap kinship: gate tat
+    assert render_scene_registry_context(one_pair, {("Sheldon", "Meemaw")}) == ""
+    ctx = render_scene_registry_context(one_pair, {("Sheldon", "Meemaw")},
+                                        extra_edges=_EXTRA)
+    assert 'Sheldon calls Meemaw "bà"' in ctx
+
+
+def test_extra_edges_with_unresolvable_names_are_ignored():
+    edges = [{"from_name": "Nobody", "to_name": "Meemaw", "vi_self": "cháu",
+              "vi_listener": "bà", "confidence": "high"}]
+    ctx = render_scene_registry_context(REG, {("George", "Meemaw")},
+                                        extra_edges=edges)
+    assert ctx == ""
+
+
+def test_single_line_prose_is_preserved_with_extra_edges():
+    ctx = render_scene_registry_context(REG, {("George", "Meemaw")},
+                                        extra_edges=_EXTRA)
+    assert "<" not in ctx and "\n" not in ctx

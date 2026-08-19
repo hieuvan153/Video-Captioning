@@ -8,6 +8,7 @@ from CHARACTER.registry_schema import (
     CONFIDENCE_LEVELS,
     PLACEHOLDER_NAMES,
     Registry,
+    Relation,
 )
 
 EXTRACTION_SYSTEM = (
@@ -140,6 +141,56 @@ def _kinship_pairs(
     return pairs
 
 
+def _address_pairs(
+    reg: Registry, min_confidence: str
+) -> dict[tuple[str, str], list]:
+    """Nhu _kinship_pairs nhung chi doi vi_LISTENER thuoc KINSHIP_TERMS.
+
+    vi_self generic ("tôi") van giu duoc thong tin nguoi nghe — chinh FN cua
+    error analysis V0 la tu xung ho CO HUONG (cô/anh/ông/cháu...). Noi long
+    nay chi an toan khi di kem pair-gating V1 (ca hai dau canh dang cam mic):
+    V0 tiem edge kieu nay toan cuc da do duoc la gay hai (movie_045 −0,036).
+    Tap tra ve la SIEU TAP cua _kinship_pairs.
+    """
+    min_rank = CONFIDENCE_LEVELS[min_confidence]
+    pairs: dict[tuple[str, str], list] = {}
+    for r in reg.relations:
+        if (CONFIDENCE_LEVELS[r.confidence] < min_rank
+                or r.vi_listener not in KINSHIP_TERMS):
+            continue
+        pairs.setdefault(tuple(sorted((r.from_id, r.to_id))), []).append(r)
+    return pairs
+
+
+def _merge_extra_edges(
+    pairs: dict[tuple[str, str], list], extra_edges, id_of: dict[str, str],
+) -> None:
+    """Tron canh xung ho dao tu vocative (SPEAKER/vocative_edges.py, dang dict
+    from_name/to_name/...) vao dict cap, resolve ten qua alias index. Canh
+    khong resolve duoc hoac trung noi dung voi canh da co thi bo qua."""
+    for e in extra_edges or ():
+        ia = id_of.get(str(e.get("from_name", "")).casefold())
+        ib = id_of.get(str(e.get("to_name", "")).casefold())
+        if not ia or not ib or ia == ib:
+            continue
+        conf = e.get("confidence")
+        rel = Relation(
+            from_id=ia, to_id=ib,
+            rel_type=str(e.get("rel_type", "address")) or "address",
+            vi_self=str(e.get("vi_self", "")),
+            vi_listener=str(e.get("vi_listener", "")),
+            confidence=conf if conf in CONFIDENCE_LEVELS else "medium",
+        )
+        key = tuple(sorted((ia, ib)))
+        existing = pairs.setdefault(key, [])
+        if not any(
+            (r.from_id, r.to_id, r.vi_self, r.vi_listener)
+            == (rel.from_id, rel.to_id, rel.vi_self, rel.vi_listener)
+            for r in existing
+        ):
+            existing.append(rel)
+
+
 def _best_rank(rels) -> int:
     return max(CONFIDENCE_LEVELS[r.confidence] for r in rels)
 
@@ -207,6 +258,7 @@ def _alias_index(reg: Registry) -> dict[str, str]:
 def render_scene_registry_context(
     reg: Registry, speaker_pairs, max_pairs: int = 4,
     min_confidence: str = "high", min_kinship_pairs: int = 2,
+    include_address_edges: bool = False, extra_edges=(),
 ) -> str:
     """Render quan he cua RIENG cac cap dang noi chuyen trong scene nay.
 
@@ -221,14 +273,23 @@ def render_scene_registry_context(
     Gate min_kinship_pairs van tinh tren CA PHIM, khong phai tren scene: no la
     quyet dinh "phim nay co dang tiem registry khong" da do duoc o V0
     (movie_046 huong loi / movie_045 bi hai). Loc theo scene la buoc sau do.
+
+    include_address_edges (V3/C.a): mo rong tap canh ung vien sang
+    _address_pairs (chi doi vi_listener thuoc KINSHIP_TERMS) — pair-gating
+    giu nguyen. extra_edges (V3/C.b): canh xung ho dao tu vocative
+    (SPEAKER/vocative_edges.py), tinh vao ca film gate: gate hoi "phim nay co
+    bang chung xung ho co huong dang tin khong", canh vocative dat nguong
+    phieu la mot nguon bang chung nhu the.
     """
     if not reg.characters or not speaker_pairs:
         return ""
-    pairs = _kinship_pairs(reg, min_confidence)
+    id_of = _alias_index(reg)
+    pairs = (_address_pairs(reg, min_confidence) if include_address_edges
+             else _kinship_pairs(reg, min_confidence))
+    _merge_extra_edges(pairs, extra_edges, id_of)
     if len(pairs) < min_kinship_pairs:
         return ""
 
-    id_of = _alias_index(reg)
     wanted: set[tuple[str, str]] = set()
     for a, b in speaker_pairs:
         ia, ib = id_of.get(a.casefold()), id_of.get(b.casefold())

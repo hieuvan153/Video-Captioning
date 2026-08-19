@@ -30,6 +30,11 @@ _MIN_OVERLAP_S = 0.05
 # movie_045 ngay 2026-08-16: 67 dong "UNKNOWN" bi dat ten "Ingram").
 _NON_TAGS = frozenset({"unknown", "unk", "none", "n/a", ""})
 
+# Tag tong hop cho vung chunk duoc nhan kich ban dinh danh truc tiep
+# (SPEAKER/label_override.py cat chunk tai thoi diem nhan). Dat hang so o day
+# de huong import mot chieu: label_override -> align.
+LABEL_TAG_PREFIX = "LABEL::"
+
 
 @dataclass(frozen=True)
 class AlignStats:
@@ -75,7 +80,12 @@ def assign_speakers(
         tag = real_tag(c)
         if not tag:
             continue
-        if min_score is not None and (c.get("speaker_score") or 0.0) < min_score:
+        # Vung LABEL:: mien loc min_score: bang chung cua no la TEXT (nhan
+        # kich ban), khong phai do khop embedding — nguong embedding khong co
+        # tham quyen xoa no.
+        if (min_score is not None
+                and not tag.startswith(LABEL_TAG_PREFIX)
+                and (c.get("speaker_score") or 0.0) < min_score):
             n_low += 1
             continue
         try:

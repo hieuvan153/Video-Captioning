@@ -27,6 +27,33 @@ from SPEAKER.align import real_tag
 # "MEEMAW:", "GEORGE JR.:", "ADULT SHELDON (V.O.):" — ASR giu lai nhan kich ban.
 _SCRIPT_LABEL = re.compile(r"\b([A-Z][A-Z0-9 .'’-]{1,24}?)(?:\s*\([^)]{0,30}\))?:")
 
+# Noise mo dau truoc nhan: chi dan san khau "(school bell rings)", "[door
+# slams]", not nhac, quote, dash. Nhan dung sau nhung thu nay van la nhan mo
+# dau chunk (movie_045 co chunk mo dau bang "(school bell rings)").
+_LEADING_NOISE = re.compile(r"^(?:\s|\([^)]*\)|\[[^\]]*\]|[\"'‘’“”]|[-–—]|♪)+")
+
+
+def iter_script_labels(text: str):
+    """Moi match nhan kich ban trong text — MOT nguon regex duy nhat, dung
+    chung boi anchor (o day) va override cap dong (SPEAKER/label_override.py)."""
+    return _SCRIPT_LABEL.finditer(text)
+
+
+def label_at_text_start(text: str, match: re.Match) -> bool:
+    """Nhan nam o dau text (sau noise mo dau) — bang chung cho CA chunk.
+
+    Nhan giua text chi noi ve phan DUOI chunk (ASR chunk vat qua doi speaker):
+    "Asked and answered. MISSY: Did you cry..." nghia la nua sau la Missy,
+    KHONG phai ca cluster la Missy.
+    """
+    return _LEADING_NOISE.sub("", text[:match.start()]).strip() == ""
+
+
+def strip_script_labels(text: str) -> str:
+    """Xoa nhan kich ban khoi text — dung truoc khi dem mention hoac tim
+    vocative, vi nhan "MOM:" nghia la nguoi noi LA me, khong phai dang goi me."""
+    return _SCRIPT_LABEL.sub(" ", text)
+
 
 def _name_pattern(name: str) -> re.Pattern:
     return re.compile(rf"\b{re.escape(name)}\b", re.IGNORECASE)
@@ -46,23 +73,55 @@ def _canonical(valid_names: list[str]) -> dict[str, str]:
 
 
 def script_label_anchors(
-    chunks: list[dict], valid_names: list[str]
+    chunks: list[dict], valid_names: list[str],
+    mid_anchor_votes: int | None = None,
 ) -> dict[str, str]:
-    """cluster -> ten, tu nhan kich ban trong chinh loi thoai cua cluster do.
+    """cluster -> ten, tu nhan kich ban MO DAU chunk cua cluster do.
 
-    Cluster co hai nhan khac nhau -> bo, khong chon bua.
+    Chi nhan o dau text (sau noise mo dau) moi anchor ca cluster. Nhan giua
+    text bi loai khoi anchor: no danh dau doi speaker BEN TRONG chunk, tuc chi
+    la bang chung ve phan duoi — do duoc (movie_045, 2026-08-17) mot nhan
+    "MISSY:" giua chunk da dat ten sai ca cluster SPK_106 (65 chunk Sheldon
+    giang vat ly), keo 60 dong SRT theo. Phan duoi do duoc xu ly o cap dong
+    boi SPEAKER/label_override.py.
+
+    mid_anchor_votes (V3.1): None = nhan giua text khong bao gio anchor (V3).
+    So k = nhan giua text van anchor ca cluster neu CUNG MOT ten xuat hien o
+    >= k chunk khac nhau cua cluster — mot phieu don le tren cluster lon la
+    bang chung yeu (SPK_106: 1 phieu "MISSY"/65 chunk dat ten sai ca cluster),
+    nhung ten lap lai nhieu chunk kho long la tinh co (V3 do duoc viec bo het
+    anchor giua-chunk lam 008/046 mat ca tag DUNG: −0,0196/−0,0364 F1).
+
+    Cluster co hai ten ung vien khac nhau -> bo, khong chon bua.
     """
     canon = _canonical(valid_names)
     votes: dict[str, set[str]] = {}
+    mid_counts: dict[str, dict[str, int]] = {}
     for c in chunks:
         tag = real_tag(c)
         if not tag:
             continue
-        for label in _SCRIPT_LABEL.findall(c.get("english") or ""):
-            real = canon.get(label.strip().casefold())
-            if real:
+        text = c.get("english") or ""
+        seen_mid: set[str] = set()   # dem theo chunk, khong theo lan xuat hien
+        for m in iter_script_labels(text):
+            real = canon.get(m.group(1).strip().casefold())
+            if not real:
+                continue
+            if label_at_text_start(text, m):
                 votes.setdefault(tag, set()).add(real)
-    return {t: next(iter(v)) for t, v in votes.items() if len(v) == 1}
+            elif mid_anchor_votes is not None and real not in seen_mid:
+                seen_mid.add(real)
+                d = mid_counts.setdefault(tag, {})
+                d[real] = d.get(real, 0) + 1
+    out: dict[str, str] = {}
+    for tag in set(votes) | set(mid_counts):
+        cands = set(votes.get(tag, ()))
+        if mid_anchor_votes is not None:
+            cands |= {n for n, k in mid_counts.get(tag, {}).items()
+                      if k >= mid_anchor_votes}
+        if len(cands) == 1:
+            out[tag] = next(iter(cands))
+    return out
 
 
 def mention_exclusions(
@@ -82,7 +141,7 @@ def mention_exclusions(
     counts: dict[str, dict[str, int]] = {}
     for c in chunks:
         tag = real_tag(c)
-        text = _SCRIPT_LABEL.sub(" ", c.get("english") or "")
+        text = strip_script_labels(c.get("english") or "")
         if not tag or not text:
             continue
         for name, pat in patterns:

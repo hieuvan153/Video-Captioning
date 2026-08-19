@@ -14,9 +14,23 @@ def _c(tag, text):
 
 def test_script_label_names_its_own_cluster():
     chunks = [_c("SPK_078", 'GEORGE JR.: The first one is, "Most people."'),
-              _c("SPK_038", "Oh. Hello. MEEMAW (quietly): There you go.")]
+              _c("SPK_038", "MEEMAW (quietly): There you go.")]
     assert script_label_anchors(chunks, NAMES) == {"SPK_078": "George Jr.",
                                                    "SPK_038": "Meemaw"}
+
+
+def test_mid_text_label_does_not_anchor_the_whole_cluster():
+    """Nhan giua chunk danh dau doi speaker BEN TRONG chunk — chi noi ve phan
+    duoi. Chinh chuoi nay (movie_045 c248) tung dat ten "Missy" cho ca cluster
+    65 chunk cua Sheldon; gio no la viec cua label_override cap dong."""
+    chunks = [_c("SPK_106",
+                 "Asked and answered. MISSY: Did you cry when you saw it? No.")]
+    assert script_label_anchors(chunks, ["Missy", "Sheldon"]) == {}
+
+
+def test_label_after_a_leading_stage_direction_still_anchors():
+    chunks = [_c("SPK_001", "(school bell rings) SHELDON: Good morning.")]
+    assert script_label_anchors(chunks, NAMES) == {"SPK_001": "Sheldon"}
 
 
 def test_conflicting_labels_in_one_cluster_are_dropped():
@@ -114,3 +128,28 @@ def test_evidence_leaves_agreeing_answers_alone():
         {"SPK_078": "George Jr."}, {"SPK_078": "George Jr."}, {}
     )
     assert out == {"SPK_078": "George Jr."} and fixed == 0 and dropped == 0
+
+
+def test_mid_label_with_two_votes_anchors_under_v3_1_policy():
+    """V3.1: cung ten o vi tri giua-chunk tai >= 2 chunk khac nhau cua cluster
+    thi van anchor — mot phieu don le (SPK_106 "MISSY" x1) van bi loai."""
+    chunks = [_c("SPK_027", "Fine. GEORGE JR.: Give it back."),
+              _c("SPK_027", "No way. GEORGE JR.: I mean it."),
+              _c("SPK_106", "Asked and answered. MISSY: Did you cry? No.")]
+    assert script_label_anchors(chunks, ["George Jr.", "Missy"],
+                                mid_anchor_votes=2) == {"SPK_027": "George Jr."}
+    # Mac dinh (None) van la V3: khong mid-anchor nao ca.
+    assert script_label_anchors(chunks, ["George Jr.", "Missy"]) == {}
+
+
+def test_mid_votes_count_chunks_not_occurrences():
+    chunks = [_c("SPK_027", "Uh. GEORGE JR.: Stop. GEORGE JR.: Now.")]
+    assert script_label_anchors(chunks, ["George Jr."],
+                                mid_anchor_votes=2) == {}
+
+
+def test_start_and_qualified_mid_conflict_drops_cluster():
+    chunks = [_c("SPK_001", "SHELDON: hi"),
+              _c("SPK_001", "Well. MEEMAW: one"),
+              _c("SPK_001", "So. MEEMAW: two")]
+    assert script_label_anchors(chunks, NAMES, mid_anchor_votes=2) == {}

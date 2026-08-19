@@ -146,6 +146,13 @@ def merge_registries(regs: list[Registry]) -> Registry:
     for i, (_, c) in enumerate(entries):
         for name in c.names:
             key = name.casefold()
+            # Placeholder ("You", "I", "Speaker"...) khong phai dinh danh:
+            # nhan vat ten-that-kem-placeholder van giu no trong names (parse
+            # chi bo nhan vat TOAN placeholder), de no tham gia union se gop
+            # bac cau moi nguoi tung bi goi "You" thanh mot mega-node
+            # (movie_009 C38 = Steve+Glenn+Jonah+God+16 placeholder).
+            if key in PLACEHOLDER_NAMES:
+                continue
             if key in alias_owner:
                 union(i, alias_owner[key])
             else:

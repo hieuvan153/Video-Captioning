@@ -1,0 +1,96 @@
+{
+  "speakers_file": "speakers.v3.json",
+  "movies": {},
+  "sweep": [
+    {
+      "min_score": null,
+      "label_override": true,
+      "fix_anchors": false,
+      "mid_anchor_votes": 2,
+      "movies": {
+        "movie_008": {
+          "n_lines": 320,
+          "n_named": 210,
+          "coverage": 0.6562,
+          "n_gender_scored": 171,
+          "gender_consistency": 0.5906,
+          "n_age_scored": 166,
+          "age_consistency": 0.988,
+          "vs_ref": {
+            "n_ref_named": 219,
+            "n_lost": 15,
+            "n_gained": 6,
+            "n_changed": 39,
+            "retention": 0.9315
+          }
+        },
+        "movie_009": {
+          "n_lines": 312,
+          "n_named": 174,
+          "coverage": 0.5577,
+          "n_gender_scored": 126,
+          "gender_consistency": 0.4762,
+          "n_age_scored": 134,
+          "age_consistency": 0.9701,
+          "vs_ref": {
+            "n_ref_named": 175,
+            "n_lost": 1,
+            "n_gained": 0,
+            "n_changed": 1,
+            "retention": 0.9943
+          }
+        },
+        "movie_015": {
+          "n_lines": 343,
+          "n_named": 258,
+          "coverage": 0.7522,
+          "n_gender_scored": 162,
+          "gender_consistency": 0.5123,
+          "n_age_scored": 187,
+          "age_consistency": 0.9679,
+          "vs_ref": {
+            "n_ref_named": 260,
+            "n_lost": 2,
+            "n_gained": 0,
+            "n_changed": 5,
+            "retention": 0.9923
+          }
+        },
+        "movie_045": {
+          "n_lines": 312,
+          "n_named": 182,
+          "coverage": 0.5833,
+          "n_gender_scored": 142,
+          "gender_consistency": 0.6056,
+          "n_age_scored": 139,
+          "age_consistency": 0.223,
+          "vs_ref": {
+            "n_ref_named": 180,
+            "n_lost": 0,
+            "n_gained": 2,
+            "n_changed": 71,
+            "retention": 1.0
+          }
+        },
+        "movie_046": {
+          "n_lines": 257,
+          "n_named": 209,
+          "coverage": 0.8132,
+          "n_gender_scored": 141,
+          "gender_consistency": 0.7163,
+          "n_age_scored": 141,
+          "age_consistency": 0.4255,
+          "vs_ref": {
+            "n_ref_named": 213,
+            "n_lost": 5,
+            "n_gained": 1,
+            "n_changed": 92,
+            "retention": 0.9765
+          }
+        }
+      },
+      "mean_gender_consistency": 0.5802,
+      "mean_coverage": 0.6725
+    }
+  ]
+}
