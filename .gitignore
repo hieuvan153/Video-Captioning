@@ -4,6 +4,7 @@
 !/demo/
 !/tests/
 !/docs/
+!/scripts/
 
 # Secrets — never commit
 .env

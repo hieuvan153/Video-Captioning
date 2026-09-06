@@ -62,6 +62,12 @@ def parse_args():
         help="Batch size for model inference."
     )
     parser.add_argument(
+        "--num_beams",
+        type=int,
+        default=1,
+        help="So beam khi giai ma. Mac dinh 1 (greedy) = dung giao thuc cua moc 'rough', dung doi."
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default="cuda" if torch.cuda.is_available() else "cpu",
@@ -69,7 +75,7 @@ def parse_args():
     )
     return parser.parse_args()
 
-def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64):
+def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64, num_beams=1):
     """
     Dịch thô danh sách phụ đề từ tiếng Anh sang tiếng Việt dựa theo logic file gốc.
     """
@@ -101,7 +107,7 @@ def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64
             output_ids = model_en2vi.generate(
                 **inputs,
                 decoder_start_token_id=tokenizer_en2vi.lang_code_to_id["vi_VN"],
-                num_beams=1,
+                num_beams=num_beams,
                 max_length=128,
                 early_stopping=True
             )
@@ -162,7 +168,7 @@ def main():
         return
 
     # 3. Tiến hành dịch thô
-    print("✍️ Đang thực hiện dịch thô phụ đề...")
+    print(f"✍️ Đang thực hiện dịch thô phụ đề... (num_beams={args.num_beams})")
     start_time = time.time()
     
     translated_subs = translate_en2vi(
@@ -170,7 +176,8 @@ def main():
         model_en2vi,
         tokenizer_en2vi,
         args.device,
-        batch_size=args.batch_size
+        batch_size=args.batch_size,
+        num_beams=args.num_beams
     )
     
     end_time = time.time()

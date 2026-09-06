@@ -27,7 +27,7 @@ chunk_threshold = 3.0
 
 # Decoding Options
 best_of = None
-beam_size = None
+beam_size = int(os.environ["ASR_BEAM"]) if os.environ.get("ASR_BEAM") else None  # mac dinh None = greedy (giu nguyen)
 patience = None
 length_penalty = None
 prefix = ""
@@ -38,7 +38,7 @@ max_initial_timestamp = 1.0
 fp16 = True
 
 # Transcriber Settings
-temperature = 0.0
+temperature = tuple(float(x) for x in os.environ.get("ASR_TEMPS", "0").split(","))  # mac dinh (0.0,) == 0.0 cu
 compression_ratio_threshold = 2.4
 logprob_threshold = -1.0
 no_speech_threshold = 0.9
