@@ -1,0 +1,926 @@
+{
+  "movies": {
+    "movie_008": {
+      "metrics": {
+        "rough": {
+          "bleu": 39.06,
+          "chrf": 54.57,
+          "pronoun_precision": 0.4179,
+          "pronoun_recall": 0.5854,
+          "pronoun_f1": 0.4877,
+          "n_lines": 320
+        },
+        "baseline": {
+          "bleu": 38.36,
+          "chrf": 52.66,
+          "pronoun_precision": 0.4091,
+          "pronoun_recall": 0.5645,
+          "pronoun_f1": 0.4744,
+          "n_lines": 320
+        },
+        "speaker": {
+          "bleu": 38.43,
+          "chrf": 53.18,
+          "pronoun_precision": 0.4246,
+          "pronoun_recall": 0.5889,
+          "pronoun_f1": 0.4934,
+          "n_lines": 320
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": 0.0133,
+          "ci95": [
+            -0.0235,
+            0.0522
+          ],
+          "p_two_sided": 0.465,
+          "n_lines": 320
+        },
+        "speaker": {
+          "delta": 0.0191,
+          "ci95": [
+            -0.0038,
+            0.0435
+          ],
+          "p_two_sided": 0.102,
+          "n_lines": 320
+        }
+      }
+    },
+    "movie_009": {
+      "metrics": {
+        "rough": {
+          "bleu": 43.74,
+          "chrf": 58.78,
+          "pronoun_precision": 0.4787,
+          "pronoun_recall": 0.6751,
+          "pronoun_f1": 0.5602,
+          "n_lines": 312
+        },
+        "baseline": {
+          "bleu": 46.21,
+          "chrf": 60.13,
+          "pronoun_precision": 0.517,
+          "pronoun_recall": 0.7192,
+          "pronoun_f1": 0.6016,
+          "n_lines": 312
+        },
+        "speaker": {
+          "bleu": 46.4,
+          "chrf": 60.13,
+          "pronoun_precision": 0.5011,
+          "pronoun_recall": 0.7098,
+          "pronoun_f1": 0.5875,
+          "n_lines": 312
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.0414,
+          "ci95": [
+            -0.0746,
+            -0.0068
+          ],
+          "p_two_sided": 0.014,
+          "n_lines": 312
+        },
+        "speaker": {
+          "delta": -0.0141,
+          "ci95": [
+            -0.0427,
+            0.0144
+          ],
+          "p_two_sided": 0.316,
+          "n_lines": 312
+        }
+      }
+    },
+    "movie_015": {
+      "metrics": {
+        "rough": {
+          "bleu": 37.4,
+          "chrf": 53.41,
+          "pronoun_precision": 0.4069,
+          "pronoun_recall": 0.6127,
+          "pronoun_f1": 0.489,
+          "n_lines": 343
+        },
+        "baseline": {
+          "bleu": 38.51,
+          "chrf": 53.99,
+          "pronoun_precision": 0.4022,
+          "pronoun_recall": 0.6243,
+          "pronoun_f1": 0.4892,
+          "n_lines": 343
+        },
+        "speaker": {
+          "bleu": 38.63,
+          "chrf": 54.0,
+          "pronoun_precision": 0.4393,
+          "pronoun_recall": 0.659,
+          "pronoun_f1": 0.5272,
+          "n_lines": 343
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.0002,
+          "ci95": [
+            -0.0332,
+            0.0326
+          ],
+          "p_two_sided": 0.965,
+          "n_lines": 343
+        },
+        "speaker": {
+          "delta": 0.0379,
+          "ci95": [
+            0.0161,
+            0.0602
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 343
+        }
+      }
+    },
+    "movie_018": {
+      "metrics": {
+        "rough": {
+          "bleu": 38.83,
+          "chrf": 54.41,
+          "pronoun_precision": 0.5013,
+          "pronoun_recall": 0.6969,
+          "pronoun_f1": 0.5831,
+          "n_lines": 288
+        },
+        "baseline": {
+          "bleu": 26.38,
+          "chrf": 39.87,
+          "pronoun_precision": 0.4965,
+          "pronoun_recall": 0.4913,
+          "pronoun_f1": 0.4939,
+          "n_lines": 288
+        },
+        "speaker": {
+          "bleu": 20.72,
+          "chrf": 31.49,
+          "pronoun_precision": 0.4318,
+          "pronoun_recall": 0.4634,
+          "pronoun_f1": 0.4471,
+          "n_lines": 288
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": 0.0892,
+          "ci95": [
+            0.0449,
+            0.1379
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 288
+        },
+        "speaker": {
+          "delta": -0.0468,
+          "ci95": [
+            -0.1001,
+            0.0079
+          ],
+          "p_two_sided": 0.087,
+          "n_lines": 288
+        }
+      }
+    },
+    "movie_045": {
+      "metrics": {
+        "rough": {
+          "bleu": 35.56,
+          "chrf": 51.76,
+          "pronoun_precision": 0.2779,
+          "pronoun_recall": 0.3603,
+          "pronoun_f1": 0.3138,
+          "n_lines": 312
+        },
+        "baseline": {
+          "bleu": 35.92,
+          "chrf": 51.03,
+          "pronoun_precision": 0.3385,
+          "pronoun_recall": 0.4377,
+          "pronoun_f1": 0.3818,
+          "n_lines": 312
+        },
+        "speaker": {
+          "bleu": 35.72,
+          "chrf": 50.32,
+          "pronoun_precision": 0.3237,
+          "pronoun_recall": 0.4141,
+          "pronoun_f1": 0.3634,
+          "n_lines": 312
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.068,
+          "ci95": [
+            -0.1157,
+            -0.0218
+          ],
+          "p_two_sided": 0.004,
+          "n_lines": 312
+        },
+        "speaker": {
+          "delta": -0.0184,
+          "ci95": [
+            -0.0583,
+            0.0206
+          ],
+          "p_two_sided": 0.384,
+          "n_lines": 312
+        }
+      }
+    },
+    "movie_046": {
+      "metrics": {
+        "rough": {
+          "bleu": 37.08,
+          "chrf": 55.61,
+          "pronoun_precision": 0.2675,
+          "pronoun_recall": 0.3577,
+          "pronoun_f1": 0.3061,
+          "n_lines": 257
+        },
+        "baseline": {
+          "bleu": 39.0,
+          "chrf": 54.75,
+          "pronoun_precision": 0.3675,
+          "pronoun_recall": 0.4959,
+          "pronoun_f1": 0.4221,
+          "n_lines": 257
+        },
+        "speaker": {
+          "bleu": 41.04,
+          "chrf": 57.03,
+          "pronoun_precision": 0.4268,
+          "pronoun_recall": 0.5691,
+          "pronoun_f1": 0.4878,
+          "n_lines": 257
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.1161,
+          "ci95": [
+            -0.1704,
+            -0.0632
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 257
+        },
+        "speaker": {
+          "delta": 0.0657,
+          "ci95": [
+            0.0236,
+            0.1087
+          ],
+          "p_two_sided": 0.001,
+          "n_lines": 257
+        }
+      }
+    },
+    "movie_054": {
+      "metrics": {
+        "rough": {
+          "bleu": 25.52,
+          "chrf": 45.37,
+          "pronoun_precision": 0.2656,
+          "pronoun_recall": 0.3846,
+          "pronoun_f1": 0.3142,
+          "n_lines": 285
+        },
+        "baseline": {
+          "bleu": 28.62,
+          "chrf": 44.81,
+          "pronoun_precision": 0.3772,
+          "pronoun_recall": 0.5084,
+          "pronoun_f1": 0.433,
+          "n_lines": 285
+        },
+        "speaker": {
+          "bleu": 13.75,
+          "chrf": 26.36,
+          "pronoun_precision": 0.1913,
+          "pronoun_recall": 0.2642,
+          "pronoun_f1": 0.2219,
+          "n_lines": 285
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.1188,
+          "ci95": [
+            -0.1665,
+            -0.0727
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 285
+        },
+        "speaker": {
+          "delta": -0.2111,
+          "ci95": [
+            -0.2636,
+            -0.1598
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 285
+        }
+      }
+    },
+    "movie_059": {
+      "metrics": {
+        "rough": {
+          "bleu": 23.02,
+          "chrf": 42.81,
+          "pronoun_precision": 0.2426,
+          "pronoun_recall": 0.3409,
+          "pronoun_f1": 0.2835,
+          "n_lines": 301
+        },
+        "baseline": {
+          "bleu": 23.77,
+          "chrf": 39.76,
+          "pronoun_precision": 0.3295,
+          "pronoun_recall": 0.4318,
+          "pronoun_f1": 0.3738,
+          "n_lines": 301
+        },
+        "speaker": {
+          "bleu": 20.19,
+          "chrf": 34.02,
+          "pronoun_precision": 0.3288,
+          "pronoun_recall": 0.3674,
+          "pronoun_f1": 0.347,
+          "n_lines": 301
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.0903,
+          "ci95": [
+            -0.1412,
+            -0.0362
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 301
+        },
+        "speaker": {
+          "delta": -0.0267,
+          "ci95": [
+            -0.07,
+            0.0147
+          ],
+          "p_two_sided": 0.228,
+          "n_lines": 301
+        }
+      }
+    },
+    "movie_081": {
+      "metrics": {
+        "rough": {
+          "bleu": 23.84,
+          "chrf": 42.9,
+          "pronoun_precision": 0.2781,
+          "pronoun_recall": 0.4125,
+          "pronoun_f1": 0.3322,
+          "n_lines": 290
+        },
+        "baseline": {
+          "bleu": 23.53,
+          "chrf": 40.78,
+          "pronoun_precision": 0.295,
+          "pronoun_recall": 0.4167,
+          "pronoun_f1": 0.3454,
+          "n_lines": 290
+        },
+        "speaker": {
+          "bleu": 22.57,
+          "chrf": 40.5,
+          "pronoun_precision": 0.2676,
+          "pronoun_recall": 0.3792,
+          "pronoun_f1": 0.3138,
+          "n_lines": 290
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.0132,
+          "ci95": [
+            -0.0628,
+            0.0373
+          ],
+          "p_two_sided": 0.601,
+          "n_lines": 290
+        },
+        "speaker": {
+          "delta": -0.0316,
+          "ci95": [
+            -0.0732,
+            0.0081
+          ],
+          "p_two_sided": 0.102,
+          "n_lines": 290
+        }
+      }
+    },
+    "movie_090": {
+      "metrics": {
+        "rough": {
+          "bleu": 30.7,
+          "chrf": 48.5,
+          "pronoun_precision": 0.2953,
+          "pronoun_recall": 0.427,
+          "pronoun_f1": 0.3492,
+          "n_lines": 270
+        },
+        "baseline": {
+          "bleu": 21.78,
+          "chrf": 35.42,
+          "pronoun_precision": 0.326,
+          "pronoun_recall": 0.3895,
+          "pronoun_f1": 0.3549,
+          "n_lines": 270
+        },
+        "speaker": {
+          "bleu": 28.52,
+          "chrf": 43.98,
+          "pronoun_precision": 0.3324,
+          "pronoun_recall": 0.4345,
+          "pronoun_f1": 0.3766,
+          "n_lines": 270
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.0058,
+          "ci95": [
+            -0.0402,
+            0.0303
+          ],
+          "p_two_sided": 0.731,
+          "n_lines": 270
+        },
+        "speaker": {
+          "delta": 0.0217,
+          "ci95": [
+            -0.0166,
+            0.0636
+          ],
+          "p_two_sided": 0.277,
+          "n_lines": 270
+        }
+      }
+    },
+    "movie_104": {
+      "metrics": {
+        "rough": {
+          "bleu": 38.08,
+          "chrf": 55.56,
+          "pronoun_precision": 0.3565,
+          "pronoun_recall": 0.4741,
+          "pronoun_f1": 0.407,
+          "n_lines": 321
+        },
+        "baseline": {
+          "bleu": 37.62,
+          "chrf": 53.47,
+          "pronoun_precision": 0.4167,
+          "pronoun_recall": 0.5556,
+          "pronoun_f1": 0.4762,
+          "n_lines": 321
+        },
+        "speaker": {
+          "bleu": 34.42,
+          "chrf": 51.65,
+          "pronoun_precision": 0.3043,
+          "pronoun_recall": 0.4148,
+          "pronoun_f1": 0.3511,
+          "n_lines": 321
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.0692,
+          "ci95": [
+            -0.1168,
+            -0.0207
+          ],
+          "p_two_sided": 0.008,
+          "n_lines": 321
+        },
+        "speaker": {
+          "delta": -0.1251,
+          "ci95": [
+            -0.1761,
+            -0.0771
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 321
+        }
+      }
+    },
+    "movie_124": {
+      "metrics": {
+        "rough": {
+          "bleu": 28.79,
+          "chrf": 45.49,
+          "pronoun_precision": 0.3088,
+          "pronoun_recall": 0.4172,
+          "pronoun_f1": 0.3549,
+          "n_lines": 306
+        },
+        "baseline": {
+          "bleu": 28.89,
+          "chrf": 45.25,
+          "pronoun_precision": 0.3975,
+          "pronoun_recall": 0.5265,
+          "pronoun_f1": 0.453,
+          "n_lines": 306
+        },
+        "speaker": {
+          "bleu": 28.89,
+          "chrf": 43.77,
+          "pronoun_precision": 0.4236,
+          "pronoun_recall": 0.5596,
+          "pronoun_f1": 0.4822,
+          "n_lines": 306
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.0981,
+          "ci95": [
+            -0.147,
+            -0.0481
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 306
+        },
+        "speaker": {
+          "delta": 0.0292,
+          "ci95": [
+            -0.0043,
+            0.0655
+          ],
+          "p_two_sided": 0.087,
+          "n_lines": 306
+        }
+      }
+    },
+    "movie_170": {
+      "metrics": {
+        "rough": {
+          "bleu": 39.19,
+          "chrf": 53.73,
+          "pronoun_precision": 0.2589,
+          "pronoun_recall": 0.3287,
+          "pronoun_f1": 0.2896,
+          "n_lines": 315
+        },
+        "baseline": {
+          "bleu": 36.05,
+          "chrf": 50.69,
+          "pronoun_precision": 0.2894,
+          "pronoun_recall": 0.3875,
+          "pronoun_f1": 0.3314,
+          "n_lines": 315
+        },
+        "speaker": {
+          "bleu": 36.71,
+          "chrf": 51.28,
+          "pronoun_precision": 0.2577,
+          "pronoun_recall": 0.3495,
+          "pronoun_f1": 0.2966,
+          "n_lines": 315
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": -0.0417,
+          "ci95": [
+            -0.0933,
+            0.0084
+          ],
+          "p_two_sided": 0.098,
+          "n_lines": 315
+        },
+        "speaker": {
+          "delta": -0.0347,
+          "ci95": [
+            -0.0583,
+            -0.014
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 315
+        }
+      }
+    },
+    "movie_189": {
+      "metrics": {
+        "rough": {
+          "bleu": 35.28,
+          "chrf": 49.35,
+          "pronoun_precision": 0.3251,
+          "pronoun_recall": 0.3725,
+          "pronoun_f1": 0.3472,
+          "n_lines": 536
+        },
+        "baseline": {
+          "bleu": 20.08,
+          "chrf": 29.15,
+          "pronoun_precision": 0.2635,
+          "pronoun_recall": 0.247,
+          "pronoun_f1": 0.255,
+          "n_lines": 536
+        },
+        "speaker": {
+          "bleu": 12.24,
+          "chrf": 20.09,
+          "pronoun_precision": 0.3016,
+          "pronoun_recall": 0.1862,
+          "pronoun_f1": 0.2303,
+          "n_lines": 536
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": 0.0922,
+          "ci95": [
+            0.0454,
+            0.1354
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 536
+        },
+        "speaker": {
+          "delta": -0.0247,
+          "ci95": [
+            -0.0673,
+            0.0156
+          ],
+          "p_two_sided": 0.265,
+          "n_lines": 536
+        }
+      }
+    },
+    "movie_291": {
+      "metrics": {
+        "rough": {
+          "bleu": 37.62,
+          "chrf": 53.75,
+          "pronoun_precision": 0.5,
+          "pronoun_recall": 0.6894,
+          "pronoun_f1": 0.5796,
+          "n_lines": 377
+        },
+        "baseline": {
+          "bleu": 21.01,
+          "chrf": 32.19,
+          "pronoun_precision": 0.4661,
+          "pronoun_recall": 0.4847,
+          "pronoun_f1": 0.4752,
+          "n_lines": 377
+        },
+        "speaker": {
+          "bleu": 15.39,
+          "chrf": 25.25,
+          "pronoun_precision": 0.447,
+          "pronoun_recall": 0.4071,
+          "pronoun_f1": 0.4261,
+          "n_lines": 377
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": 0.1044,
+          "ci95": [
+            0.0653,
+            0.1451
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 377
+        },
+        "speaker": {
+          "delta": -0.0491,
+          "ci95": [
+            -0.0901,
+            -0.0079
+          ],
+          "p_two_sided": 0.015,
+          "n_lines": 377
+        }
+      }
+    },
+    "movie_311": {
+      "metrics": {
+        "rough": {
+          "bleu": 37.48,
+          "chrf": 52.84,
+          "pronoun_precision": 0.5034,
+          "pronoun_recall": 0.6667,
+          "pronoun_f1": 0.5736,
+          "n_lines": 413
+        },
+        "baseline": {
+          "bleu": 32.06,
+          "chrf": 46.3,
+          "pronoun_precision": 0.4971,
+          "pronoun_recall": 0.5749,
+          "pronoun_f1": 0.5332,
+          "n_lines": 413
+        },
+        "speaker": {
+          "bleu": 32.44,
+          "chrf": 46.36,
+          "pronoun_precision": 0.4924,
+          "pronoun_recall": 0.5772,
+          "pronoun_f1": 0.5314,
+          "n_lines": 413
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": 0.0404,
+          "ci95": [
+            0.0088,
+            0.0719
+          ],
+          "p_two_sided": 0.008,
+          "n_lines": 413
+        },
+        "speaker": {
+          "delta": -0.0018,
+          "ci95": [
+            -0.0225,
+            0.0211
+          ],
+          "p_two_sided": 0.877,
+          "n_lines": 413
+        }
+      }
+    },
+    "movie_312": {
+      "metrics": {
+        "rough": {
+          "bleu": 39.31,
+          "chrf": 56.05,
+          "pronoun_precision": 0.5057,
+          "pronoun_recall": 0.6456,
+          "pronoun_f1": 0.5672,
+          "n_lines": 384
+        },
+        "baseline": {
+          "bleu": 18.42,
+          "chrf": 28.0,
+          "pronoun_precision": 0.326,
+          "pronoun_recall": 0.3617,
+          "pronoun_f1": 0.3429,
+          "n_lines": 384
+        },
+        "speaker": {
+          "bleu": 12.04,
+          "chrf": 21.34,
+          "pronoun_precision": 0.3276,
+          "pronoun_recall": 0.2791,
+          "pronoun_f1": 0.3014,
+          "n_lines": 384
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": 0.2242,
+          "ci95": [
+            0.1834,
+            0.2678
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 384
+        },
+        "speaker": {
+          "delta": -0.0415,
+          "ci95": [
+            -0.0978,
+            0.0151
+          ],
+          "p_two_sided": 0.161,
+          "n_lines": 384
+        }
+      }
+    },
+    "movie_336": {
+      "metrics": {
+        "rough": {
+          "bleu": 36.73,
+          "chrf": 51.63,
+          "pronoun_precision": 0.4487,
+          "pronoun_recall": 0.6651,
+          "pronoun_f1": 0.5359,
+          "n_lines": 476
+        },
+        "baseline": {
+          "bleu": 5.4,
+          "chrf": 11.87,
+          "pronoun_precision": 0.2301,
+          "pronoun_recall": 0.2684,
+          "pronoun_f1": 0.2478,
+          "n_lines": 476
+        },
+        "speaker": {
+          "bleu": 16.66,
+          "chrf": 26.54,
+          "pronoun_precision": 0.3632,
+          "pronoun_recall": 0.3468,
+          "pronoun_f1": 0.3548,
+          "n_lines": 476
+        }
+      },
+      "vs_baseline": {
+        "rough": {
+          "delta": 0.2881,
+          "ci95": [
+            0.2425,
+            0.3332
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 476
+        },
+        "speaker": {
+          "delta": 0.107,
+          "ci95": [
+            0.0532,
+            0.1598
+          ],
+          "p_two_sided": 0.0,
+          "n_lines": 476
+        }
+      }
+    }
+  },
+  "overall": {
+    "metrics": {
+      "rough": {
+        "bleu": 36.34,
+        "chrf": 51.89,
+        "pronoun_precision": 0.3819,
+        "pronoun_recall": 0.5206,
+        "pronoun_f1": 0.4406,
+        "n_lines": 6106
+      },
+      "baseline": {
+        "bleu": 28.32,
+        "chrf": 41.3,
+        "pronoun_precision": 0.375,
+        "pronoun_recall": 0.4631,
+        "pronoun_f1": 0.4144,
+        "n_lines": 6106
+      },
+      "speaker": {
+        "bleu": 26.94,
+        "chrf": 39.65,
+        "pronoun_precision": 0.3717,
+        "pronoun_recall": 0.4343,
+        "pronoun_f1": 0.4006,
+        "n_lines": 6106
+      }
+    },
+    "vs_baseline": {
+      "rough": {
+        "delta": 0.0262,
+        "ci95": [
+          0.0158,
+          0.0368
+        ],
+        "p_two_sided": 0.0,
+        "n_lines": 6106
+      },
+      "speaker": {
+        "delta": -0.0139,
+        "ci95": [
+          -0.0239,
+          -0.0041
+        ],
+        "p_two_sided": 0.006,
+        "n_lines": 6106
+      }
+    },
+    "mean_delta_per_movie": {
+      "rough": 0.0105,
+      "speaker": -0.0192
+    }
+  },
+  "arms": {
+    "rough": "rough.srt",
+    "baseline": "v1b_baseline.srt",
+    "speaker": "v1b_speaker.srt"
+  },
+  "ref_arm": "baseline"
+}

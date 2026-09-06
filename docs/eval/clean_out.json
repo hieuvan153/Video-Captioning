@@ -1,0 +1,82 @@
+{
+  "protocol": "scene-level (thesis 4.1/4.3.5)",
+  "movies": {
+    "movie_002": {
+      "rough.srt": {
+        "bleu": 20.56,
+        "n_scenes": 116,
+        "comet": 0.7662
+      },
+      "nocontext.srt": {
+        "bleu": 20.54,
+        "n_scenes": 116,
+        "comet": 0.7766
+      },
+      "context.srt": {
+        "bleu": 20.82,
+        "n_scenes": 116,
+        "comet": 0.78
+      }
+    },
+    "movie_005": {
+      "rough.srt": {
+        "bleu": 25.67,
+        "n_scenes": 210,
+        "comet": 0.7599
+      },
+      "nocontext.srt": {
+        "bleu": 26.86,
+        "n_scenes": 210,
+        "comet": 0.7764
+      },
+      "context.srt": {
+        "bleu": 27.01,
+        "n_scenes": 210,
+        "comet": 0.7771
+      }
+    },
+    "movie_006": {
+      "rough.srt": {
+        "bleu": 24.88,
+        "n_scenes": 139,
+        "comet": 0.754
+      },
+      "nocontext.srt": {
+        "bleu": 26.07,
+        "n_scenes": 139,
+        "comet": 0.7666
+      },
+      "context.srt": {
+        "bleu": 25.97,
+        "n_scenes": 139,
+        "comet": 0.7658
+      }
+    }
+  },
+  "overall": {
+    "rough.srt": {
+      "bleu": 24.64,
+      "comet": 0.7597,
+      "pronoun_precision": 0.5619,
+      "pronoun_recall": 0.6124,
+      "pronoun_f1": 0.5861,
+      "n_scenes": 465
+    },
+    "nocontext.srt": {
+      "bleu": 25.56,
+      "comet": 0.7735,
+      "pronoun_precision": 0.5424,
+      "pronoun_recall": 0.5975,
+      "pronoun_f1": 0.5686,
+      "n_scenes": 465
+    },
+    "context.srt": {
+      "bleu": 25.68,
+      "comet": 0.7745,
+      "pronoun_precision": 0.5447,
+      "pronoun_recall": 0.6011,
+      "pronoun_f1": 0.5715,
+      "n_scenes": 465
+    }
+  }
+}

@@ -5,6 +5,10 @@
 !/tests/
 !/docs/
 
+# Secrets — never commit
+.env
+.env.*
+
 # Generated / heavy content
 __pycache__/
 unsloth_compiled_cache/
@@ -16,3 +20,9 @@ unsloth_compiled_cache/
 /demo/ASR/vad_chunks/
 /demo/scene_seg/output/
 /demo/NMT/*.srt
+/demo/model_clean/
+/demo/model*/
+van_env/
+*.pt
+*.bin
+*.safetensors

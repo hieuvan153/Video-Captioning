@@ -1,0 +1,52 @@
+{
+  "speakers_file": "speakers.json",
+  "movies": {
+    "movie_008": {
+      "n_lines": 320,
+      "n_named": 219,
+      "coverage": 0.6844,
+      "n_gender_scored": 180,
+      "gender_consistency": 0.6,
+      "n_age_scored": 175,
+      "age_consistency": 0.9886
+    },
+    "movie_009": {
+      "n_lines": 312,
+      "n_named": 175,
+      "coverage": 0.5609,
+      "n_gender_scored": 127,
+      "gender_consistency": 0.4724,
+      "n_age_scored": 135,
+      "age_consistency": 0.9704
+    },
+    "movie_015": {
+      "n_lines": 343,
+      "n_named": 260,
+      "coverage": 0.758,
+      "n_gender_scored": 165,
+      "gender_consistency": 0.5212,
+      "n_age_scored": 190,
+      "age_consistency": 0.9684
+    },
+    "movie_045": {
+      "n_lines": 312,
+      "n_named": 180,
+      "coverage": 0.5769,
+      "n_gender_scored": 140,
+      "gender_consistency": 0.4286,
+      "n_age_scored": 137,
+      "age_consistency": 0.2482
+    },
+    "movie_046": {
+      "n_lines": 257,
+      "n_named": 213,
+      "coverage": 0.8288,
+      "n_gender_scored": 143,
+      "gender_consistency": 0.6643,
+      "n_age_scored": 143,
+      "age_consistency": 0.4336
+    }
+  },
+  "mean_gender_consistency": 0.5373,
+  "mean_coverage": 0.6818
+}

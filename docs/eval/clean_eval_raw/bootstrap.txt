@@ -1,0 +1,6 @@
+## E5
+BLEU: nocontext.srt - rough.srt = +1.27  95%CI=[+0.93, +1.58]  p(b<=a)=0.000  n_scenes=284
+chrF: nocontext.srt - rough.srt = +0.54  95%CI=[+0.31, +0.77]  p(b<=a)=0.000  n_scenes=284
+BLEU: context.srt - nocontext.srt = +0.22  95%CI=[-0.01, +0.46]  p(b<=a)=0.031  n_scenes=284
+chrF: context.srt - nocontext.srt = +0.13  95%CI=[-0.04, +0.31]  p(b<=a)=0.068  n_scenes=284
+BLEU: context.srt - rough.srt = +1.49  95%CI=[+1.18, +1.81]  p(b<=a)=0.000  n_scenes=284

@@ -1,0 +1,237 @@
+{
+  "protocol": "scene-level (thesis 4.1/4.3.5)",
+  "movies": {
+    "movie_001": {
+      "clean_ck1412_baseline.srt": {
+        "bleu": 29.09,
+        "n_scenes": 165,
+        "comet": null
+      },
+      "clean_ck2118_baseline.srt": {
+        "bleu": 28.11,
+        "n_scenes": 165,
+        "comet": null
+      },
+      "clean_ck2824_baseline.srt": {
+        "bleu": 29.7,
+        "n_scenes": 165,
+        "comet": null
+      },
+      "clean_ck706_baseline.srt": {
+        "bleu": 31.94,
+        "n_scenes": 165,
+        "comet": null
+      }
+    },
+    "movie_008": {
+      "clean_ck1412_baseline.srt": {
+        "bleu": 37.34,
+        "n_scenes": 32,
+        "comet": null
+      },
+      "clean_ck2118_baseline.srt": {
+        "bleu": 37.68,
+        "n_scenes": 32,
+        "comet": null
+      },
+      "clean_ck2824_baseline.srt": {
+        "bleu": 36.95,
+        "n_scenes": 32,
+        "comet": null
+      },
+      "clean_ck706_baseline.srt": {
+        "bleu": 38.13,
+        "n_scenes": 32,
+        "comet": null
+      }
+    },
+    "movie_009": {
+      "clean_ck1412_baseline.srt": {
+        "bleu": 44.73,
+        "n_scenes": 32,
+        "comet": null
+      },
+      "clean_ck2118_baseline.srt": {
+        "bleu": 45.7,
+        "n_scenes": 32,
+        "comet": null
+      },
+      "clean_ck2824_baseline.srt": {
+        "bleu": 45.38,
+        "n_scenes": 32,
+        "comet": null
+      },
+      "clean_ck706_baseline.srt": {
+        "bleu": 45.13,
+        "n_scenes": 32,
+        "comet": null
+      }
+    },
+    "movie_015": {
+      "clean_ck1412_baseline.srt": {
+        "bleu": 37.17,
+        "n_scenes": 35,
+        "comet": null
+      },
+      "clean_ck2118_baseline.srt": {
+        "bleu": 38.21,
+        "n_scenes": 35,
+        "comet": null
+      },
+      "clean_ck2824_baseline.srt": {
+        "bleu": 36.82,
+        "n_scenes": 35,
+        "comet": null
+      },
+      "clean_ck706_baseline.srt": {
+        "bleu": 36.74,
+        "n_scenes": 35,
+        "comet": null
+      }
+    },
+    "movie_018": {
+      "clean_ck1412_baseline.srt": {
+        "bleu": 38.23,
+        "n_scenes": 24,
+        "comet": null
+      },
+      "clean_ck2118_baseline.srt": {
+        "bleu": 38.3,
+        "n_scenes": 24,
+        "comet": null
+      },
+      "clean_ck2824_baseline.srt": {
+        "bleu": 38.33,
+        "n_scenes": 24,
+        "comet": null
+      },
+      "clean_ck706_baseline.srt": {
+        "bleu": 37.52,
+        "n_scenes": 24,
+        "comet": null
+      }
+    },
+    "movie_045": {
+      "clean_ck1412_baseline.srt": {
+        "bleu": 35.75,
+        "n_scenes": 32,
+        "comet": null
+      },
+      "clean_ck2118_baseline.srt": {
+        "bleu": 35.53,
+        "n_scenes": 32,
+        "comet": null
+      },
+      "clean_ck2824_baseline.srt": {
+        "bleu": 34.1,
+        "n_scenes": 32,
+        "comet": null
+      },
+      "clean_ck706_baseline.srt": {
+        "bleu": 33.36,
+        "n_scenes": 32,
+        "comet": null
+      }
+    },
+    "movie_046": {
+      "clean_ck1412_baseline.srt": {
+        "bleu": 40.8,
+        "n_scenes": 26,
+        "comet": null
+      },
+      "clean_ck2118_baseline.srt": {
+        "bleu": 40.89,
+        "n_scenes": 26,
+        "comet": null
+      },
+      "clean_ck2824_baseline.srt": {
+        "bleu": 41.41,
+        "n_scenes": 26,
+        "comet": null
+      },
+      "clean_ck706_baseline.srt": {
+        "bleu": 40.8,
+        "n_scenes": 26,
+        "comet": null
+      }
+    },
+    "movie_059": {
+      "clean_ck1412_baseline.srt": {
+        "bleu": 26.22,
+        "n_scenes": 29,
+        "comet": null
+      },
+      "clean_ck2118_baseline.srt": {
+        "bleu": 27.19,
+        "n_scenes": 29,
+        "comet": null
+      },
+      "clean_ck2824_baseline.srt": {
+        "bleu": 26.97,
+        "n_scenes": 29,
+        "comet": null
+      },
+      "clean_ck706_baseline.srt": {
+        "bleu": 26.05,
+        "n_scenes": 29,
+        "comet": null
+      }
+    },
+    "movie_189": {
+      "clean_ck1412_baseline.srt": {
+        "bleu": 36.16,
+        "n_scenes": 48,
+        "comet": null
+      },
+      "clean_ck2118_baseline.srt": {
+        "bleu": 36.35,
+        "n_scenes": 48,
+        "comet": null
+      },
+      "clean_ck2824_baseline.srt": {
+        "bleu": 36.95,
+        "n_scenes": 48,
+        "comet": null
+      },
+      "clean_ck706_baseline.srt": {
+        "bleu": 37.18,
+        "n_scenes": 48,
+        "comet": null
+      }
+    }
+  },
+  "overall": {
+    "clean_ck1412_baseline.srt": {
+      "bleu": 35.97,
+      "comet": null,
+      "pronoun_precision": 0.5916,
+      "pronoun_recall": 0.6526,
+      "pronoun_f1": 0.6206,
+      "n_scenes": 423
+    },
+    "clean_ck2118_baseline.srt": {
+      "bleu": 36.08,
+      "comet": null,
+      "pronoun_precision": 0.5964,
+      "pronoun_recall": 0.6479,
+      "pronoun_f1": 0.6211,
+      "n_scenes": 423
+    },
+    "clean_ck2824_baseline.srt": {
+      "bleu": 35.87,
+      "comet": null,
+      "pronoun_precision": 0.6059,
+      "pronoun_recall": 0.6394,
+      "pronoun_f1": 0.6222,
+      "n_scenes": 423
+    },
+    "clean_ck706_baseline.srt": {
+      "bleu": 36.71,
+      "comet": null,
+      "pronoun_precision": 0.578,
+      "pronoun_recall": 0.6501,
+      "pronoun_f1": 0.6119,
+      "n_scenes": 423
+    }
+  }
+}

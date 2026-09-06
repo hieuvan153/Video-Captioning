@@ -1,0 +1,29 @@
+{
+  "mode": "pair",
+  "speakers_file": "speakers.v3.json",
+  "movies": {
+    "movie_008": {
+      "fired": 0,
+      "scenes": 32
+    },
+    "movie_009": {
+      "fired": 0,
+      "scenes": 32
+    },
+    "movie_015": {
+      "fired": 0,
+      "scenes": 35
+    },
+    "movie_045": {
+      "fired": 0,
+      "scenes": 32
+    },
+    "movie_046": {
+      "fired": 15,
+      "scenes": 26
+    }
+  },
+  "total_fired": 15,
+  "total_scenes": 157,
+  "n_films_fired": 1
+}

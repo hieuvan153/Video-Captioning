@@ -1,0 +1,31 @@
+{
+ "test_e5": [
+  "movie_054",
+  "movie_081",
+  "movie_090",
+  "movie_104",
+  "movie_124",
+  "movie_170",
+  "movie_291",
+  "movie_311",
+  "movie_312",
+  "movie_336"
+ ],
+ "test_out": [
+  "movie_002",
+  "movie_005",
+  "movie_006"
+ ],
+ "val": [
+  "movie_001",
+  "movie_008",
+  "movie_009",
+  "movie_015",
+  "movie_018",
+  "movie_045",
+  "movie_046",
+  "movie_059",
+  "movie_189"
+ ],
+ "adapter_clean": "demo/model_clean/adapter_clean/checkpoint-2118"
+}

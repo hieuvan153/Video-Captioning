@@ -1,0 +1,201 @@
+{
+  "protocol": "scene-level (thesis 4.1/4.3.5)",
+  "movies": {
+    "movie_054": {
+      "rough.srt": {
+        "bleu": 26.34,
+        "n_scenes": 28,
+        "comet": 0.7729
+      },
+      "v1b_baseline.srt": {
+        "bleu": 29.3,
+        "n_scenes": 28,
+        "comet": 0.794
+      },
+      "v1b_speaker.srt": {
+        "bleu": 27.65,
+        "n_scenes": 28,
+        "comet": 0.7797
+      }
+    },
+    "movie_081": {
+      "rough.srt": {
+        "bleu": 22.05,
+        "n_scenes": 27,
+        "comet": 0.7645
+      },
+      "v1b_baseline.srt": {
+        "bleu": 22.7,
+        "n_scenes": 27,
+        "comet": 0.7812
+      },
+      "v1b_speaker.srt": {
+        "bleu": 22.5,
+        "n_scenes": 27,
+        "comet": 0.7804
+      }
+    },
+    "movie_090": {
+      "rough.srt": {
+        "bleu": 28.82,
+        "n_scenes": 27,
+        "comet": 0.7401
+      },
+      "v1b_baseline.srt": {
+        "bleu": 28.3,
+        "n_scenes": 27,
+        "comet": 0.7483
+      },
+      "v1b_speaker.srt": {
+        "bleu": 28.12,
+        "n_scenes": 27,
+        "comet": 0.7459
+      }
+    },
+    "movie_104": {
+      "rough.srt": {
+        "bleu": 36.9,
+        "n_scenes": 28,
+        "comet": 0.8131
+      },
+      "v1b_baseline.srt": {
+        "bleu": 37.31,
+        "n_scenes": 28,
+        "comet": 0.8151
+      },
+      "v1b_speaker.srt": {
+        "bleu": 38.24,
+        "n_scenes": 28,
+        "comet": 0.8273
+      }
+    },
+    "movie_124": {
+      "rough.srt": {
+        "bleu": 28.18,
+        "n_scenes": 26,
+        "comet": 0.7822
+      },
+      "v1b_baseline.srt": {
+        "bleu": 30.53,
+        "n_scenes": 26,
+        "comet": 0.7954
+      },
+      "v1b_speaker.srt": {
+        "bleu": 29.67,
+        "n_scenes": 26,
+        "comet": 0.7924
+      }
+    },
+    "movie_170": {
+      "rough.srt": {
+        "bleu": 35.67,
+        "n_scenes": 28,
+        "comet": 0.7875
+      },
+      "v1b_baseline.srt": {
+        "bleu": 35.69,
+        "n_scenes": 28,
+        "comet": 0.7958
+      },
+      "v1b_speaker.srt": {
+        "bleu": 33.63,
+        "n_scenes": 28,
+        "comet": 0.7957
+      }
+    },
+    "movie_291": {
+      "rough.srt": {
+        "bleu": 38.19,
+        "n_scenes": 38,
+        "comet": 0.7946
+      },
+      "v1b_baseline.srt": {
+        "bleu": 38.71,
+        "n_scenes": 38,
+        "comet": 0.8162
+      },
+      "v1b_speaker.srt": {
+        "bleu": 39.3,
+        "n_scenes": 38,
+        "comet": 0.8127
+      }
+    },
+    "movie_311": {
+      "rough.srt": {
+        "bleu": 36.18,
+        "n_scenes": 35,
+        "comet": 0.7693
+      },
+      "v1b_baseline.srt": {
+        "bleu": 36.59,
+        "n_scenes": 35,
+        "comet": 0.7807
+      },
+      "v1b_speaker.srt": {
+        "bleu": 36.58,
+        "n_scenes": 35,
+        "comet": 0.7787
+      }
+    },
+    "movie_312": {
+      "rough.srt": {
+        "bleu": 39.16,
+        "n_scenes": 23,
+        "comet": 0.8103
+      },
+      "v1b_baseline.srt": {
+        "bleu": 39.9,
+        "n_scenes": 23,
+        "comet": 0.8193
+      },
+      "v1b_speaker.srt": {
+        "bleu": 35.72,
+        "n_scenes": 23,
+        "comet": 0.7555
+      }
+    },
+    "movie_336": {
+      "rough.srt": {
+        "bleu": 32.09,
+        "n_scenes": 26,
+        "comet": 0.7871
+      },
+      "v1b_baseline.srt": {
+        "bleu": 31.44,
+        "n_scenes": 26,
+        "comet": 0.7904
+      },
+      "v1b_speaker.srt": {
+        "bleu": 31.54,
+        "n_scenes": 26,
+        "comet": 0.7885
+      }
+    }
+  },
+  "overall": {
+    "rough.srt": {
+      "bleu": 33.49,
+      "comet": 0.782,
+      "pronoun_precision": 0.5765,
+      "pronoun_recall": 0.7466,
+      "pronoun_f1": 0.6506,
+      "n_scenes": 286
+    },
+    "v1b_baseline.srt": {
+      "bleu": 34.1,
+      "comet": 0.7939,
+      "pronoun_precision": 0.6485,
+      "pronoun_recall": 0.7528,
+      "pronoun_f1": 0.6968,
+      "n_scenes": 286
+    },
+    "v1b_speaker.srt": {
+      "bleu": 33.46,
+      "comet": 0.7871,
+      "pronoun_precision": 0.6384,
+      "pronoun_recall": 0.7335,
+      "pronoun_f1": 0.6826,
+      "n_scenes": 286
+    }
+  }
+}

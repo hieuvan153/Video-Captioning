@@ -1,0 +1,139 @@
+{
+  "movies": {
+    "movie_008": {
+      "rough": {
+        "bleu": 39.06,
+        "chrf": 54.57,
+        "pronoun_precision": 0.4179,
+        "pronoun_recall": 0.5854,
+        "pronoun_f1": 0.4877,
+        "n_lines": 320
+      },
+      "baseline": {
+        "bleu": 37.87,
+        "chrf": 52.15,
+        "pronoun_precision": 0.4224,
+        "pronoun_recall": 0.5784,
+        "pronoun_f1": 0.4882,
+        "n_lines": 320
+      },
+      "registry": {
+        "bleu": 38.52,
+        "chrf": 52.62,
+        "pronoun_precision": 0.4198,
+        "pronoun_recall": 0.5749,
+        "pronoun_f1": 0.4853,
+        "n_lines": 320
+      }
+    },
+    "movie_009": {
+      "rough": {
+        "bleu": 43.74,
+        "chrf": 58.78,
+        "pronoun_precision": 0.4787,
+        "pronoun_recall": 0.6751,
+        "pronoun_f1": 0.5602,
+        "n_lines": 312
+      },
+      "baseline": {
+        "bleu": 46.41,
+        "chrf": 60.3,
+        "pronoun_precision": 0.525,
+        "pronoun_recall": 0.7287,
+        "pronoun_f1": 0.6103,
+        "n_lines": 312
+      },
+      "registry": {
+        "bleu": 46.57,
+        "chrf": 60.29,
+        "pronoun_precision": 0.5089,
+        "pronoun_recall": 0.7192,
+        "pronoun_f1": 0.5961,
+        "n_lines": 312
+      }
+    },
+    "movie_015": {
+      "rough": {
+        "bleu": 37.4,
+        "chrf": 53.41,
+        "pronoun_precision": 0.4069,
+        "pronoun_recall": 0.6127,
+        "pronoun_f1": 0.489,
+        "n_lines": 343
+      },
+      "baseline": {
+        "bleu": 31.94,
+        "chrf": 51.5,
+        "pronoun_precision": 0.279,
+        "pronoun_recall": 0.6329,
+        "pronoun_f1": 0.3873,
+        "n_lines": 343
+      },
+      "registry": {
+        "bleu": 37.26,
+        "chrf": 52.81,
+        "pronoun_precision": 0.4198,
+        "pronoun_recall": 0.6358,
+        "pronoun_f1": 0.5057,
+        "n_lines": 343
+      }
+    },
+    "movie_045": {
+      "rough": {
+        "bleu": 35.56,
+        "chrf": 51.76,
+        "pronoun_precision": 0.2779,
+        "pronoun_recall": 0.3603,
+        "pronoun_f1": 0.3138,
+        "n_lines": 312
+      },
+      "baseline": {
+        "bleu": 35.92,
+        "chrf": 51.26,
+        "pronoun_precision": 0.3316,
+        "pronoun_recall": 0.4343,
+        "pronoun_f1": 0.3761,
+        "n_lines": 312
+      },
+      "registry": {
+        "bleu": 35.81,
+        "chrf": 50.86,
+        "pronoun_precision": 0.3013,
+        "pronoun_recall": 0.3906,
+        "pronoun_f1": 0.3402,
+        "n_lines": 312
+      }
+    },
+    "movie_046": {
+      "rough": {
+        "bleu": 37.08,
+        "chrf": 55.61,
+        "pronoun_precision": 0.2675,
+        "pronoun_recall": 0.3577,
+        "pronoun_f1": 0.3061,
+        "n_lines": 257
+      },
+      "baseline": {
+        "bleu": 39.47,
+        "chrf": 55.42,
+        "pronoun_precision": 0.3765,
+        "pronoun_recall": 0.5081,
+        "pronoun_f1": 0.4325,
+        "n_lines": 257
+      },
+      "registry": {
+        "bleu": 39.97,
+        "chrf": 55.31,
+        "pronoun_precision": 0.4149,
+        "pronoun_recall": 0.565,
+        "pronoun_f1": 0.4785,
+        "n_lines": 257
+      }
+    }
+  },
+  "mean_delta": {
+    "pronoun_f1": 0.0223,
+    "bleu": 1.304,
+    "chrf": 0.252
+  }
+}

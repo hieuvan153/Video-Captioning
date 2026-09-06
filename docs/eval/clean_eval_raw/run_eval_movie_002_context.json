@@ -1,0 +1,8 @@
+{
+  "bleu": 17.27,
+  "chrf": 34.57,
+  "pronoun_precision": 0.2669,
+  "pronoun_recall": 0.3238,
+  "pronoun_f1": 0.2926,
+  "n_lines": 1633
+}

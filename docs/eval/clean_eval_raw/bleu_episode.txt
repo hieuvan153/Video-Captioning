@@ -1,0 +1,50 @@
+## E5 (10 tap)
+rough                                         n=10  raw 32.71  nopunc 30.73  custom 34.41
+nocontext                                     n=10  raw 33.43  nopunc 31.95  custom 35.25
+context                                       n=10  raw 33.63  nopunc 32.06  custom 35.48
+Traceback (most recent call last):
+  File "/data/ndloc_bk/NLHV/ntVan/demo/EVAL/bleu_episode.py", line 76, in <module>
+    main()
+  File "/data/ndloc_bk/NLHV/ntVan/demo/EVAL/bleu_episode.py", line 69, in main
+    r = score_dir(d, subs, only)
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/ndloc_bk/NLHV/ntVan/demo/EVAL/bleu_episode.py", line 55, in score_dir
+    out = {k: sacrebleu.corpus_bleu(h, [r]).score for k, (h, r) in pairs.items()}
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/ndloc_bk/NLHV/ntVan/demo/EVAL/bleu_episode.py", line 55, in <dictcomp>
+    out = {k: sacrebleu.corpus_bleu(h, [r]).score for k, (h, r) in pairs.items()}
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/ndloc_bk/NLHV/ntVan/van_env/lib/python3.11/site-packages/sacrebleu/compat.py", line 37, in corpus_bleu
+    return metric.corpus_score(hypotheses, references)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/ndloc_bk/NLHV/ntVan/van_env/lib/python3.11/site-packages/sacrebleu/metrics/base.py", line 434, in corpus_score
+    self._check_corpus_score_args(hypotheses, references)
+  File "/data/ndloc_bk/NLHV/ntVan/van_env/lib/python3.11/site-packages/sacrebleu/metrics/base.py", line 253, in _check_corpus_score_args
+    elif not isinstance(hyps[0], str):
+                        ~~~~^^^
+IndexError: list index out of range
+## E-out (3 phim)
+rough                                         n= 3  raw 32.78  nopunc 29.68  custom 34.66
+nocontext                                     n= 3  raw 33.03  nopunc 30.51  custom 34.85
+context                                       n= 3  raw 33.12  nopunc 30.55  custom 34.93
+Traceback (most recent call last):
+  File "/data/ndloc_bk/NLHV/ntVan/demo/EVAL/bleu_episode.py", line 76, in <module>
+    main()
+  File "/data/ndloc_bk/NLHV/ntVan/demo/EVAL/bleu_episode.py", line 69, in main
+    r = score_dir(d, subs, only)
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/ndloc_bk/NLHV/ntVan/demo/EVAL/bleu_episode.py", line 55, in score_dir
+    out = {k: sacrebleu.corpus_bleu(h, [r]).score for k, (h, r) in pairs.items()}
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/ndloc_bk/NLHV/ntVan/demo/EVAL/bleu_episode.py", line 55, in <dictcomp>
+    out = {k: sacrebleu.corpus_bleu(h, [r]).score for k, (h, r) in pairs.items()}
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/ndloc_bk/NLHV/ntVan/van_env/lib/python3.11/site-packages/sacrebleu/compat.py", line 37, in corpus_bleu
+    return metric.corpus_score(hypotheses, references)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/ndloc_bk/NLHV/ntVan/van_env/lib/python3.11/site-packages/sacrebleu/metrics/base.py", line 434, in corpus_score
+    self._check_corpus_score_args(hypotheses, references)
+  File "/data/ndloc_bk/NLHV/ntVan/van_env/lib/python3.11/site-packages/sacrebleu/metrics/base.py", line 253, in _check_corpus_score_args
+    elif not isinstance(hyps[0], str):
+                        ~~~~^^^
+IndexError: list index out of range

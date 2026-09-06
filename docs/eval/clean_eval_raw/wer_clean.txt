@@ -1,0 +1,14 @@
+movie_054 S01E017 WER= 13.8% sub=155 del=97 ins=75
+movie_081 S02E021 WER=  8.6% sub=74 del=48 ins=91
+movie_312 S03E001 WER=  8.9% sub=87 del=156 ins=68
+movie_104 S03E002 WER=  7.6% sub=73 del=55 ins=56
+movie_090 S03E011 WER= 11.6% sub=96 del=141 ins=52
+movie_311 S03E015 WER= 13.4% sub=239 del=127 ins=134
+movie_291 S03E017 WER=  7.3% sub=127 del=73 ins=76
+movie_124 S04E014 WER=  9.3% sub=77 del=125 ins=41
+movie_336 S05E015 WER=  7.9% sub=139 del=136 ins=62
+Traceback (most recent call last):
+  File "/data/ndloc_bk/NLHV/ntVan/docs/eval/audit_2026-09-02/asr_wer_e5.py", line 21, in <module>
+    hyp_subs = list(srt.parse(open(f'{os.environ.get("EVAL_DIR","demo/output/eval_e5")}/{mv}/en.srt', encoding='utf-8').read()))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'demo/output/eval_clean/movie_170/en.srt'

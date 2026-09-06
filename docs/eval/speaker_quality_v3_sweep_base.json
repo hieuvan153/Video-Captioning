@@ -1,0 +1,276 @@
+{
+  "speakers_file": "speakers.json",
+  "movies": {},
+  "sweep": [
+    {
+      "min_score": null,
+      "label_override": false,
+      "fix_anchors": false,
+      "movies": {
+        "movie_008": {
+          "n_lines": 320,
+          "n_named": 219,
+          "coverage": 0.6844,
+          "n_gender_scored": 180,
+          "gender_consistency": 0.6,
+          "n_age_scored": 175,
+          "age_consistency": 0.9886
+        },
+        "movie_009": {
+          "n_lines": 312,
+          "n_named": 175,
+          "coverage": 0.5609,
+          "n_gender_scored": 127,
+          "gender_consistency": 0.4724,
+          "n_age_scored": 135,
+          "age_consistency": 0.9704
+        },
+        "movie_015": {
+          "n_lines": 343,
+          "n_named": 260,
+          "coverage": 0.758,
+          "n_gender_scored": 165,
+          "gender_consistency": 0.5212,
+          "n_age_scored": 190,
+          "age_consistency": 0.9684
+        },
+        "movie_045": {
+          "n_lines": 312,
+          "n_named": 180,
+          "coverage": 0.5769,
+          "n_gender_scored": 140,
+          "gender_consistency": 0.4286,
+          "n_age_scored": 137,
+          "age_consistency": 0.2482
+        },
+        "movie_046": {
+          "n_lines": 257,
+          "n_named": 213,
+          "coverage": 0.8288,
+          "n_gender_scored": 143,
+          "gender_consistency": 0.6643,
+          "n_age_scored": 143,
+          "age_consistency": 0.4336
+        }
+      },
+      "mean_gender_consistency": 0.5373,
+      "mean_coverage": 0.6818
+    },
+    {
+      "min_score": 0.5,
+      "label_override": false,
+      "fix_anchors": false,
+      "movies": {
+        "movie_008": {
+          "n_lines": 320,
+          "n_named": 179,
+          "coverage": 0.5594,
+          "n_gender_scored": 153,
+          "gender_consistency": 0.6144,
+          "n_age_scored": 150,
+          "age_consistency": 0.9867
+        },
+        "movie_009": {
+          "n_lines": 312,
+          "n_named": 147,
+          "coverage": 0.4712,
+          "n_gender_scored": 112,
+          "gender_consistency": 0.4911,
+          "n_age_scored": 117,
+          "age_consistency": 0.9658
+        },
+        "movie_015": {
+          "n_lines": 343,
+          "n_named": 225,
+          "coverage": 0.656,
+          "n_gender_scored": 143,
+          "gender_consistency": 0.5315,
+          "n_age_scored": 166,
+          "age_consistency": 0.9699
+        },
+        "movie_045": {
+          "n_lines": 312,
+          "n_named": 159,
+          "coverage": 0.5096,
+          "n_gender_scored": 127,
+          "gender_consistency": 0.4094,
+          "n_age_scored": 125,
+          "age_consistency": 0.248
+        },
+        "movie_046": {
+          "n_lines": 257,
+          "n_named": 180,
+          "coverage": 0.7004,
+          "n_gender_scored": 125,
+          "gender_consistency": 0.664,
+          "n_age_scored": 125,
+          "age_consistency": 0.424
+        }
+      },
+      "mean_gender_consistency": 0.5421,
+      "mean_coverage": 0.5793
+    },
+    {
+      "min_score": 0.55,
+      "label_override": false,
+      "fix_anchors": false,
+      "movies": {
+        "movie_008": {
+          "n_lines": 320,
+          "n_named": 141,
+          "coverage": 0.4406,
+          "n_gender_scored": 122,
+          "gender_consistency": 0.6148,
+          "n_age_scored": 119,
+          "age_consistency": 0.9916
+        },
+        "movie_009": {
+          "n_lines": 312,
+          "n_named": 112,
+          "coverage": 0.359,
+          "n_gender_scored": 90,
+          "gender_consistency": 0.5111,
+          "n_age_scored": 94,
+          "age_consistency": 0.9574
+        },
+        "movie_015": {
+          "n_lines": 343,
+          "n_named": 185,
+          "coverage": 0.5394,
+          "n_gender_scored": 119,
+          "gender_consistency": 0.5294,
+          "n_age_scored": 138,
+          "age_consistency": 0.971
+        },
+        "movie_045": {
+          "n_lines": 312,
+          "n_named": 134,
+          "coverage": 0.4295,
+          "n_gender_scored": 106,
+          "gender_consistency": 0.3868,
+          "n_age_scored": 104,
+          "age_consistency": 0.25
+        },
+        "movie_046": {
+          "n_lines": 257,
+          "n_named": 154,
+          "coverage": 0.5992,
+          "n_gender_scored": 108,
+          "gender_consistency": 0.6481,
+          "n_age_scored": 108,
+          "age_consistency": 0.4167
+        }
+      },
+      "mean_gender_consistency": 0.538,
+      "mean_coverage": 0.4735
+    },
+    {
+      "min_score": 0.6,
+      "label_override": false,
+      "fix_anchors": false,
+      "movies": {
+        "movie_008": {
+          "n_lines": 320,
+          "n_named": 102,
+          "coverage": 0.3187,
+          "n_gender_scored": 95,
+          "gender_consistency": 0.6316,
+          "n_age_scored": 94,
+          "age_consistency": 0.9894
+        },
+        "movie_009": {
+          "n_lines": 312,
+          "n_named": 72,
+          "coverage": 0.2308,
+          "n_gender_scored": 60,
+          "gender_consistency": 0.55,
+          "n_age_scored": 63,
+          "age_consistency": 0.9683
+        },
+        "movie_015": {
+          "n_lines": 343,
+          "n_named": 123,
+          "coverage": 0.3586,
+          "n_gender_scored": 85,
+          "gender_consistency": 0.5294,
+          "n_age_scored": 94,
+          "age_consistency": 0.9787
+        },
+        "movie_045": {
+          "n_lines": 312,
+          "n_named": 98,
+          "coverage": 0.3141,
+          "n_gender_scored": 77,
+          "gender_consistency": 0.3766,
+          "n_age_scored": 75,
+          "age_consistency": 0.2667
+        },
+        "movie_046": {
+          "n_lines": 257,
+          "n_named": 119,
+          "coverage": 0.463,
+          "n_gender_scored": 85,
+          "gender_consistency": 0.6588,
+          "n_age_scored": 85,
+          "age_consistency": 0.4353
+        }
+      },
+      "mean_gender_consistency": 0.5493,
+      "mean_coverage": 0.337
+    },
+    {
+      "min_score": 0.65,
+      "label_override": false,
+      "fix_anchors": false,
+      "movies": {
+        "movie_008": {
+          "n_lines": 320,
+          "n_named": 58,
+          "coverage": 0.1812,
+          "n_gender_scored": 55,
+          "gender_consistency": 0.6727,
+          "n_age_scored": 54,
+          "age_consistency": 1.0
+        },
+        "movie_009": {
+          "n_lines": 312,
+          "n_named": 49,
+          "coverage": 0.1571,
+          "n_gender_scored": 42,
+          "gender_consistency": 0.5476,
+          "n_age_scored": 44,
+          "age_consistency": 0.9773
+        },
+        "movie_015": {
+          "n_lines": 343,
+          "n_named": 72,
+          "coverage": 0.2099,
+          "n_gender_scored": 55,
+          "gender_consistency": 0.5455,
+          "n_age_scored": 60,
+          "age_consistency": 0.9667
+        },
+        "movie_045": {
+          "n_lines": 312,
+          "n_named": 66,
+          "coverage": 0.2115,
+          "n_gender_scored": 51,
+          "gender_consistency": 0.2353,
+          "n_age_scored": 49,
+          "age_consistency": 0.2857
+        },
+        "movie_046": {
+          "n_lines": 257,
+          "n_named": 85,
+          "coverage": 0.3307,
+          "n_gender_scored": 59,
+          "gender_consistency": 0.7288,
+          "n_age_scored": 59,
+          "age_consistency": 0.4407
+        }
+      },
+      "mean_gender_consistency": 0.546,
+      "mean_coverage": 0.2181
+    }
+  ]
+}

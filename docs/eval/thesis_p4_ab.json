@@ -1,0 +1,59 @@
+{
+  "protocol": "scene-level (thesis 4.1/4.3.5)",
+  "movies": {
+    "movie_336": {
+      "v1b_baseline.srt": {
+        "bleu": 31.44,
+        "n_scenes": 26,
+        "comet": 0.7904
+      },
+      "p4_baseline.srt": {
+        "bleu": 32.07,
+        "n_scenes": 26,
+        "comet": 0.7895
+      }
+    },
+    "movie_090": {
+      "v1b_baseline.srt": {
+        "bleu": 28.3,
+        "n_scenes": 27,
+        "comet": 0.7483
+      },
+      "p4_baseline.srt": {
+        "bleu": 28.04,
+        "n_scenes": 27,
+        "comet": 0.7442
+      }
+    },
+    "movie_312": {
+      "v1b_baseline.srt": {
+        "bleu": 39.9,
+        "n_scenes": 23,
+        "comet": 0.8193
+      },
+      "p4_baseline.srt": {
+        "bleu": 38.84,
+        "n_scenes": 23,
+        "comet": 0.8128
+      }
+    }
+  },
+  "overall": {
+    "v1b_baseline.srt": {
+      "bleu": 34.1,
+      "comet": 0.7842,
+      "pronoun_precision": 0.678,
+      "pronoun_recall": 0.776,
+      "pronoun_f1": 0.7237,
+      "n_scenes": 76
+    },
+    "p4_baseline.srt": {
+      "bleu": 34.11,
+      "comet": 0.7805,
+      "pronoun_precision": 0.6524,
+      "pronoun_recall": 0.7807,
+      "pronoun_f1": 0.7108,
+      "n_scenes": 76
+    }
+  }
+}

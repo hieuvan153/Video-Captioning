@@ -1,0 +1,390 @@
+### movie_054 rough
+line counts differ (421 vs 364); aligning by time overlap
+{
+  "bleu": 16.04,
+  "chrf": 38.45,
+  "pronoun_precision": 0.3168,
+  "pronoun_recall": 0.4095,
+  "pronoun_f1": 0.3572,
+  "n_lines": 364
+}
+### movie_054 nocontext
+line counts differ (421 vs 364); aligning by time overlap
+{
+  "bleu": 17.33,
+  "chrf": 37.5,
+  "pronoun_precision": 0.352,
+  "pronoun_recall": 0.45,
+  "pronoun_f1": 0.395,
+  "n_lines": 364
+}
+### movie_054 context
+line counts differ (421 vs 364); aligning by time overlap
+{
+  "bleu": 17.52,
+  "chrf": 37.58,
+  "pronoun_precision": 0.3833,
+  "pronoun_recall": 0.4929,
+  "pronoun_f1": 0.4313,
+  "n_lines": 364
+}
+### movie_081 rough
+line counts differ (420 vs 385); aligning by time overlap
+{
+  "bleu": 13.5,
+  "chrf": 35.13,
+  "pronoun_precision": 0.2881,
+  "pronoun_recall": 0.423,
+  "pronoun_f1": 0.3427,
+  "n_lines": 385
+}
+### movie_081 nocontext
+line counts differ (420 vs 385); aligning by time overlap
+{
+  "bleu": 14.61,
+  "chrf": 35.79,
+  "pronoun_precision": 0.304,
+  "pronoun_recall": 0.4381,
+  "pronoun_f1": 0.3589,
+  "n_lines": 385
+}
+### movie_081 context
+line counts differ (420 vs 385); aligning by time overlap
+{
+  "bleu": 14.51,
+  "chrf": 35.87,
+  "pronoun_precision": 0.3154,
+  "pronoun_recall": 0.4592,
+  "pronoun_f1": 0.3739,
+  "n_lines": 385
+}
+### movie_090 rough
+line counts differ (402 vs 333); aligning by time overlap
+{
+  "bleu": 19.06,
+  "chrf": 41.66,
+  "pronoun_precision": 0.2991,
+  "pronoun_recall": 0.4436,
+  "pronoun_f1": 0.3573,
+  "n_lines": 333
+}
+### movie_090 nocontext
+line counts differ (402 vs 333); aligning by time overlap
+{
+  "bleu": 18.51,
+  "chrf": 40.11,
+  "pronoun_precision": 0.296,
+  "pronoun_recall": 0.4304,
+  "pronoun_f1": 0.3508,
+  "n_lines": 333
+}
+### movie_090 context
+line counts differ (402 vs 333); aligning by time overlap
+{
+  "bleu": 20.2,
+  "chrf": 42.34,
+  "pronoun_precision": 0.348,
+  "pronoun_recall": 0.4987,
+  "pronoun_f1": 0.4099,
+  "n_lines": 333
+}
+### movie_104 rough
+line counts differ (390 vs 405); aligning by time overlap
+{
+  "bleu": 21.43,
+  "chrf": 48.06,
+  "pronoun_precision": 0.3314,
+  "pronoun_recall": 0.4804,
+  "pronoun_f1": 0.3922,
+  "n_lines": 405
+}
+### movie_104 nocontext
+line counts differ (390 vs 405); aligning by time overlap
+{
+  "bleu": 22.39,
+  "chrf": 48.12,
+  "pronoun_precision": 0.3527,
+  "pronoun_recall": 0.5084,
+  "pronoun_f1": 0.4165,
+  "n_lines": 405
+}
+### movie_104 context
+line counts differ (390 vs 405); aligning by time overlap
+{
+  "bleu": 21.73,
+  "chrf": 47.0,
+  "pronoun_precision": 0.3398,
+  "pronoun_recall": 0.4888,
+  "pronoun_f1": 0.4009,
+  "n_lines": 405
+}
+### movie_124 rough
+line counts differ (397 vs 365); aligning by time overlap
+{
+  "bleu": 16.2,
+  "chrf": 37.94,
+  "pronoun_precision": 0.2974,
+  "pronoun_recall": 0.4055,
+  "pronoun_f1": 0.3432,
+  "n_lines": 365
+}
+### movie_124 nocontext
+line counts differ (397 vs 365); aligning by time overlap
+{
+  "bleu": 17.24,
+  "chrf": 38.59,
+  "pronoun_precision": 0.3652,
+  "pronoun_recall": 0.4851,
+  "pronoun_f1": 0.4167,
+  "n_lines": 365
+}
+### movie_124 context
+line counts differ (397 vs 365); aligning by time overlap
+{
+  "bleu": 17.4,
+  "chrf": 38.64,
+  "pronoun_precision": 0.3664,
+  "pronoun_recall": 0.4876,
+  "pronoun_f1": 0.4184,
+  "n_lines": 365
+}
+### movie_170 rough
+line counts differ (392 vs 358); aligning by time overlap
+{
+  "bleu": 22.51,
+  "chrf": 43.63,
+  "pronoun_precision": 0.2831,
+  "pronoun_recall": 0.3592,
+  "pronoun_f1": 0.3166,
+  "n_lines": 358
+}
+### movie_170 nocontext
+line counts differ (392 vs 358); aligning by time overlap
+{
+  "bleu": 21.41,
+  "chrf": 41.8,
+  "pronoun_precision": 0.2708,
+  "pronoun_recall": 0.3359,
+  "pronoun_f1": 0.2999,
+  "n_lines": 358
+}
+### movie_170 context
+line counts differ (392 vs 358); aligning by time overlap
+{
+  "bleu": 21.78,
+  "chrf": 42.13,
+  "pronoun_precision": 0.3138,
+  "pronoun_recall": 0.4005,
+  "pronoun_f1": 0.3519,
+  "n_lines": 358
+}
+### movie_291 rough
+line counts differ (577 vs 469); aligning by time overlap
+{
+  "bleu": 21.75,
+  "chrf": 46.15,
+  "pronoun_precision": 0.4776,
+  "pronoun_recall": 0.6865,
+  "pronoun_f1": 0.5633,
+  "n_lines": 469
+}
+### movie_291 nocontext
+line counts differ (577 vs 469); aligning by time overlap
+{
+  "bleu": 22.65,
+  "chrf": 46.88,
+  "pronoun_precision": 0.4831,
+  "pronoun_recall": 0.6897,
+  "pronoun_f1": 0.5682,
+  "n_lines": 469
+}
+### movie_291 context
+line counts differ (577 vs 469); aligning by time overlap
+{
+  "bleu": 22.97,
+  "chrf": 47.18,
+  "pronoun_precision": 0.4994,
+  "pronoun_recall": 0.709,
+  "pronoun_f1": 0.586,
+  "n_lines": 469
+}
+### movie_311 rough
+line counts differ (580 vs 479); aligning by time overlap
+{
+  "bleu": 18.8,
+  "chrf": 41.96,
+  "pronoun_precision": 0.4233,
+  "pronoun_recall": 0.5878,
+  "pronoun_f1": 0.4921,
+  "n_lines": 479
+}
+### movie_311 nocontext
+line counts differ (580 vs 479); aligning by time overlap
+{
+  "bleu": 19.62,
+  "chrf": 42.61,
+  "pronoun_precision": 0.4346,
+  "pronoun_recall": 0.6144,
+  "pronoun_f1": 0.5091,
+  "n_lines": 479
+}
+### movie_311 context
+line counts differ (580 vs 479); aligning by time overlap
+{
+  "bleu": 19.72,
+  "chrf": 42.38,
+  "pronoun_precision": 0.4432,
+  "pronoun_recall": 0.6176,
+  "pronoun_f1": 0.516,
+  "n_lines": 479
+}
+### movie_312 rough
+line counts differ (509 vs 469); aligning by time overlap
+{
+  "bleu": 20.42,
+  "chrf": 44.24,
+  "pronoun_precision": 0.4542,
+  "pronoun_recall": 0.6241,
+  "pronoun_f1": 0.5258,
+  "n_lines": 469
+}
+### movie_312 nocontext
+line counts differ (509 vs 469); aligning by time overlap
+{
+  "bleu": 20.72,
+  "chrf": 44.16,
+  "pronoun_precision": 0.4483,
+  "pronoun_recall": 0.6152,
+  "pronoun_f1": 0.5187,
+  "n_lines": 469
+}
+### movie_312 context
+line counts differ (509 vs 469); aligning by time overlap
+{
+  "bleu": 20.87,
+  "chrf": 44.31,
+  "pronoun_precision": 0.4547,
+  "pronoun_recall": 0.6223,
+  "pronoun_f1": 0.5254,
+  "n_lines": 469
+}
+### movie_336 rough
+line counts differ (631 vs 602); aligning by time overlap
+{
+  "bleu": 14.36,
+  "chrf": 39.0,
+  "pronoun_precision": 0.3414,
+  "pronoun_recall": 0.6021,
+  "pronoun_f1": 0.4358,
+  "n_lines": 602
+}
+### movie_336 nocontext
+line counts differ (631 vs 602); aligning by time overlap
+{
+  "bleu": 14.41,
+  "chrf": 38.54,
+  "pronoun_precision": 0.3526,
+  "pronoun_recall": 0.6175,
+  "pronoun_f1": 0.4489,
+  "n_lines": 602
+}
+### movie_336 context
+line counts differ (631 vs 602); aligning by time overlap
+{
+  "bleu": 14.32,
+  "chrf": 38.56,
+  "pronoun_precision": 0.3486,
+  "pronoun_recall": 0.6123,
+  "pronoun_f1": 0.4443,
+  "n_lines": 602
+}
+### movie_002 rough
+line counts differ (1802 vs 1633); aligning by time overlap
+{
+  "bleu": 16.64,
+  "chrf": 34.46,
+  "pronoun_precision": 0.2423,
+  "pronoun_recall": 0.293,
+  "pronoun_f1": 0.2653,
+  "n_lines": 1633
+}
+### movie_002 nocontext
+line counts differ (1802 vs 1633); aligning by time overlap
+{
+  "bleu": 17.02,
+  "chrf": 34.1,
+  "pronoun_precision": 0.258,
+  "pronoun_recall": 0.311,
+  "pronoun_f1": 0.282,
+  "n_lines": 1633
+}
+### movie_002 context
+line counts differ (1802 vs 1633); aligning by time overlap
+{
+  "bleu": 17.27,
+  "chrf": 34.57,
+  "pronoun_precision": 0.2669,
+  "pronoun_recall": 0.3238,
+  "pronoun_f1": 0.2926,
+  "n_lines": 1633
+}
+### movie_005 rough
+line counts differ (2980 vs 2941); aligning by time overlap
+{
+  "bleu": 18.19,
+  "chrf": 41.91,
+  "pronoun_precision": 0.3828,
+  "pronoun_recall": 0.5501,
+  "pronoun_f1": 0.4514,
+  "n_lines": 2941
+}
+### movie_005 nocontext
+line counts differ (2980 vs 2941); aligning by time overlap
+{
+  "bleu": 18.71,
+  "chrf": 41.85,
+  "pronoun_precision": 0.3595,
+  "pronoun_recall": 0.519,
+  "pronoun_f1": 0.4247,
+  "n_lines": 2941
+}
+### movie_005 context
+line counts differ (2980 vs 2941); aligning by time overlap
+{
+  "bleu": 19.16,
+  "chrf": 42.48,
+  "pronoun_precision": 0.3638,
+  "pronoun_recall": 0.5278,
+  "pronoun_f1": 0.4307,
+  "n_lines": 2941
+}
+### movie_006 rough
+line counts differ (1731 vs 1692); aligning by time overlap
+{
+  "bleu": 16.37,
+  "chrf": 39.07,
+  "pronoun_precision": 0.3668,
+  "pronoun_recall": 0.5476,
+  "pronoun_f1": 0.4393,
+  "n_lines": 1692
+}
+### movie_006 nocontext
+line counts differ (1731 vs 1692); aligning by time overlap
+{
+  "bleu": 16.91,
+  "chrf": 39.01,
+  "pronoun_precision": 0.3748,
+  "pronoun_recall": 0.5543,
+  "pronoun_f1": 0.4473,
+  "n_lines": 1692
+}
+### movie_006 context
+line counts differ (1731 vs 1692); aligning by time overlap
+{
+  "bleu": 16.65,
+  "chrf": 38.87,
+  "pronoun_precision": 0.369,
+  "pronoun_recall": 0.55,
+  "pronoun_f1": 0.4417,
+  "n_lines": 1692
+}

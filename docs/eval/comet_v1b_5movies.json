@@ -1,0 +1,89 @@
+{
+  "model": "Unbabel/wmt22-comet-da",
+  "movies": {
+    "movie_008": {
+      "rough.srt": {
+        "comet": 0.8512,
+        "n_lines": 320
+      },
+      "v1b_baseline.srt": {
+        "comet": 0.8325,
+        "n_lines": 320
+      },
+      "v1b_speaker.srt": {
+        "comet": 0.8438,
+        "n_lines": 320
+      }
+    },
+    "movie_009": {
+      "rough.srt": {
+        "comet": 0.8641,
+        "n_lines": 312
+      },
+      "v1b_baseline.srt": {
+        "comet": 0.8704,
+        "n_lines": 312
+      },
+      "v1b_speaker.srt": {
+        "comet": 0.8713,
+        "n_lines": 312
+      }
+    },
+    "movie_015": {
+      "rough.srt": {
+        "comet": 0.8428,
+        "n_lines": 343
+      },
+      "v1b_baseline.srt": {
+        "comet": 0.8428,
+        "n_lines": 343
+      },
+      "v1b_speaker.srt": {
+        "comet": 0.8443,
+        "n_lines": 343
+      }
+    },
+    "movie_045": {
+      "rough.srt": {
+        "comet": 0.8574,
+        "n_lines": 312
+      },
+      "v1b_baseline.srt": {
+        "comet": 0.8458,
+        "n_lines": 312
+      },
+      "v1b_speaker.srt": {
+        "comet": 0.8321,
+        "n_lines": 312
+      }
+    },
+    "movie_046": {
+      "rough.srt": {
+        "comet": 0.8428,
+        "n_lines": 257
+      },
+      "v1b_baseline.srt": {
+        "comet": 0.8398,
+        "n_lines": 257
+      },
+      "v1b_speaker.srt": {
+        "comet": 0.8531,
+        "n_lines": 257
+      }
+    }
+  },
+  "overall": {
+    "rough.srt": {
+      "comet": 0.8518,
+      "n_lines": 1544
+    },
+    "v1b_baseline.srt": {
+      "comet": 0.8464,
+      "n_lines": 1544
+    },
+    "v1b_speaker.srt": {
+      "comet": 0.8487,
+      "n_lines": 1544
+    }
+  }
+}
