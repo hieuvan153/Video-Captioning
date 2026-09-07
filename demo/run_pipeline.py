@@ -183,7 +183,13 @@ def step5_run_nmt(english_srt_path, rough_srt_path, cache_dir):
         model,
         tokenizer,
         "cuda",
-        batch_size=64
+        batch_size=64,
+        # G2 08/09/2026 tren Ode to Joy, bootstrap 1000 vong vs greedy:
+        #   beam5  chrF +0.74 [+0.34,+1.18]  COMET +0.0025 [+0.0001,+0.0046]
+        #   lp4.0  chrF +1.26 [+0.91,+1.62]  COMET +0.0035 [+0.0015,+0.0055]
+        # lp la dinh that: quet den 12.0, chrF di ngang tu 4.0 con BLEU roi deu.
+        num_beams=5,
+        length_penalty=4.0
     )
     
     with open(rough_srt_path, "w", encoding="utf-8") as f:
