@@ -93,6 +93,9 @@ def main() -> None:
     # chieu no phu -> cue dai bi nhan ban text -> chrF tut. Cat lai theo moc tu chua khoang lang.
     ap.add_argument("--split_gap_s", type=float, default=None, help="tach cue khi khoang lang giua 2 tu >= nguong (can --word_ts)")
     ap.add_argument("--max_cue_s", type=float, default=None, help="tran do dai cue, tach tai tu ke tiep (can --word_ts)")
+    # San 1.0s KHONG phai so doan: do tren chinh ban tham chieu nguoi lam cua Ode to Joy, EN co
+    # 0.9% cue ngan hon 1.0s (p05 = 1.15s), VI co 7.8% (p05 = 0.96s). Tuc 1.0s dung o dung phan
+    # vi 5 cua tay nghe nguoi that. Ha xuong 0.6s thi gan nhu bo chan (ref chi 0.1% duoi 0.6s).
     ap.add_argument("--min_cue_s", type=float, default=1.0, help="san do dai cue cho NGUOI XEM doc kip; manh ngan hon bi gop nguoc")
     ap.add_argument("--words_json", default=None, help="ghi kem moc tu ra JSON de cat lai offline, khoi chay lai ASR")
     ap.add_argument("--selftest", action="store_true")
