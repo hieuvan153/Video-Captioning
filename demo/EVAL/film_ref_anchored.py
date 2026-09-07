@@ -106,6 +106,7 @@ def main() -> None:
         print(f"{name:12s} BLEU {row['bleu']:6.2f}  chrF {row['chrf']:6.2f}  doan rong {row['empty_rate']:.1%}"
               + (f"  COMET-DA {row['comet_da']:.4f}" if "comet_da" in row else ""), flush=True)
 
+    cmp = {}
     if a.base and a.base in arms:
         base = a.base
         for name in arms:
@@ -120,16 +121,21 @@ def main() -> None:
                     ds.append(fn([hn[i] for i in idx], [[r[i] for i in idx]]).score
                               - fn([hb[i] for i in idx], [[r[i] for i in idx]]).score)
                 ds.sort()
+                cmp.setdefault(name, {})[mname] = [round(d0, 4), round(ds[int(.025*a.n)], 4), round(ds[int(.975*a.n)], 4)]
                 print(f"  {mname}: {name} - {base} = {d0:+.2f}  95%CI=[{ds[int(.025*a.n)]:+.2f}, {ds[int(.975*a.n)]:+.2f}]", flush=True)
             if name in seg and base in seg:
                 d = [x - y for x, y in zip(seg[name], seg[base])]
                 random.seed(0); ds = sorted(sum(random.choice(d) for _ in d) / len(d) for _ in range(a.n))
+                cmp.setdefault(name, {})["COMET-DA"] = [round(sum(d)/len(d), 6), round(ds[int(.025*a.n)], 6), round(ds[int(.975*a.n)], 6)]
                 print(f"  COMET-DA: {name} - {base} = {sum(d)/len(d):+.4f}"
                       f"  95%CI=[{ds[int(.025*a.n)]:+.4f}, {ds[int(.975*a.n)]:+.4f}]", flush=True)
 
     if a.report:
         with open(a.report, "w", encoding="utf-8") as f:
-            json.dump({"ref": a.ref, "src_en": a.src_en, "scores": rep}, f, ensure_ascii=False, indent=1)
+            # {arm: {metric: [delta, ci_lo, ci_hi]}} so voi --base. Truoc day CI chi ra stdout,
+            # doc lai phai lan mo file .log -> da mat thoi gian hai lan.
+            json.dump({"ref": a.ref, "src_en": a.src_en, "base": a.base, "scores": rep, "vs_base": cmp},
+                      f, ensure_ascii=False, indent=1)
         print("Report:", a.report)
 
 
