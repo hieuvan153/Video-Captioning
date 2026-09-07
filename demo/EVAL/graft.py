@@ -29,7 +29,8 @@ def words_of(subs: list[srt.Subtitle]) -> tuple[list[str], list[int]]:
     return ws, owner
 
 
-def graft(text: list[srt.Subtitle], grid: list[srt.Subtitle]) -> list[srt.Subtitle]:
+def graft(text: list[srt.Subtitle], grid: list[srt.Subtitle],
+          fill: bool = True) -> list[srt.Subtitle]:
     tw, _ = words_of(text)
     gw, gown = words_of(grid)
     key = lambda ws: [NORM.sub("", w).lower() for w in ws]
@@ -62,7 +63,11 @@ def graft(text: list[srt.Subtitle], grid: list[srt.Subtitle]) -> list[srt.Subtit
             buckets.setdefault(o, []).append(w)
     out = []
     for i, s in enumerate(grid):
-        t = " ".join(buckets.get(i, ()))
+        # Cue khong nhan duoc chu nao = tu cua luoi nam tron trong khoi "insert" (luoi noi ma ban
+        # kia khong noi). Bo cue di thi doan RONG, ma doan rong cham 0 - do duoc: bo 93 cue day
+        # doan rong 3,6% -> 5,9% va an het phan loi WER. Giu lai chu cua chinh luoi thi te nhat
+        # cung bang arm luoi, khong bao gio te hon.
+        t = " ".join(buckets.get(i, ())) or (re.sub(r"\s+", " ", s.content).strip() if fill else "")
         if t:
             out.append(srt.Subtitle(index=len(out) + 1, start=s.start, end=s.end, content=t))
     return out
@@ -83,6 +88,11 @@ def selftest() -> None:
     # moc thoi gian cua nguon bi troi hoan toan -> khong anh huong, vi chi dung THU TU tu
     out = graft([C(50, 99, "hello there general kenobi")], grid)
     assert [s.content for s in out] == ["hello there", "general kenobi"]
+    # cue cua luoi khong nhan duoc chu -> mac dinh giu chu cua chinh luoi, --no_fill thi bo
+    out = graft([C(0, 1, "hello there")], grid)
+    assert [s.content for s in out] == ["hello there", "general kenobi"], [s.content for s in out]
+    out = graft([C(0, 1, "hello there")], grid, fill=False)
+    assert [s.content for s in out] == ["hello there"], [s.content for s in out]
     print("selftest OK")
 
 
@@ -91,13 +101,15 @@ def main() -> None:
     ap.add_argument("--text", help="SRT lay NOI DUNG (arm WER tot)")
     ap.add_argument("--grid", help="SRT lay LUOI CUE + moc thoi gian (arm dat cho tot)")
     ap.add_argument("--out")
+    ap.add_argument("--no_fill", action="store_true",
+                    help="bo cue khong nhan duoc chu, thay vi giu chu cua luoi (mac dinh: giu)")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
     if a.selftest:
         return selftest()
     L = lambda p: list(srt.parse(open(p, encoding="utf-8-sig", errors="replace").read()))
     text, grid = L(a.text), L(a.grid)
-    out = graft(text, grid)
+    out = graft(text, grid, fill=not a.no_fill)
     with open(a.out, "w", encoding="utf-8") as f:
         f.write(srt.compose(out))
     nt = sum(len(s.content.split()) for s in text)
