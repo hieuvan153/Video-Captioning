@@ -273,8 +273,14 @@ if not p5_ran:
           "kiểm chứng*.", ""]
 if not verdict["arms"]:
     L += ["- Không arm nào được chấm điểm — xem cột Ghi chú ở bảng chặng (mục 1) để biết chỗ hỏng."]
+# Arm "gold_*" an dau vao la phu de EN cua NGUOI - pipeline khong co thu do luc chay that.
+# Chung la ORACLE do tran, khong bao gio duoc goi y lam duong mac dinh.
+ORACLE = ("gold_",)
 for a, v in verdict["arms"].items():
-    if v["G2"] == "PASS":
+    if v["G2"] == "PASS" and a.startswith(ORACLE):
+        L.append(f"- **`{a}` — ORACLE, KHÔNG triển khai được.** Qua cổng G2 nhưng đầu vào là bản EN "
+                 f"của người; chỉ dùng để đọc trần, không phải ứng viên đường mặc định.")
+    elif v["G2"] == "PASS":
         L.append(f"- **`{a}` — GIỮ.** Qua cổng G2, thắng `rough` có ý nghĩa thống kê. Ứng viên "
                  f"thành đường mặc định v2 (sửa `run_pipeline.py` ở phiên CÓ giám sát, không sửa trong đêm).")
     elif v["G2"] == "UNTRUSTED":

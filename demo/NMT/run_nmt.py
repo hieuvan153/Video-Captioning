@@ -184,7 +184,7 @@ def main():
     print(f"✓ Dịch xong trong {end_time - start_time:.2f} giây.")
 
     # 4. Ghi file phụ đề tiếng Việt đã dịch
-    os.makedirs(os.path.dirname(args.output_srt), exist_ok=True)
+    os.makedirs(os.path.dirname(args.output_srt) or ".", exist_ok=True)
     srt_content = srt.compose(translated_subs)
     
     with open(args.output_srt, "w", encoding="utf-8") as f:
