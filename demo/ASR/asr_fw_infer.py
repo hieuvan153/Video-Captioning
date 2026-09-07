@@ -34,11 +34,26 @@ def main() -> None:
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--compute_type", default="float16")
     ap.add_argument("--no_vad", action="store_true", help="tat VAD Silero (mac dinh van bat - giu nguyen hanh vi 1a)")
+    # Nup calibration cho VAD. Mac dinh cua faster-whisper (thr 0.5 / sil 2000ms / pad 400ms) la
+    # GATING chat tay -> bo sot gap doi (do duoc 07/09: del 7.10 -> 14.39). asr_movie_infer.py cat-ghep
+    # kieu WhisperX o thong so rong hon nhieu: thr 0.2, khoang lang 3000ms, dem duoi 1300ms.
+    ap.add_argument("--vad_thr", type=float, default=None)
+    ap.add_argument("--vad_min_sil_ms", type=int, default=None)
+    ap.add_argument("--vad_pad_ms", type=int, default=None)
+    # Moc thoi gian muc segment cua Whisper von long leo; bat word_timestamps thi faster-whisper
+    # gong lai bien segment theo DTW cross-attention muc tu. Do 07/09: lech |start| trung binh cua
+    # cut&merge la 0.48s, cua no-VAD la 1.14s - do lech nay moi la thu an diem chrF/COMET.
+    ap.add_argument("--word_ts", action="store_true")
     a = ap.parse_args()
 
     t0 = time.time()
     print(f"[fw] nap model {a.model} ({a.device}/{a.compute_type})...", flush=True)
     model = WhisperModel(a.model, device=a.device, compute_type=a.compute_type)
+
+    vad_params = {k: v for k, v in (("threshold", a.vad_thr),
+                                    ("min_silence_duration_ms", a.vad_min_sil_ms),
+                                    ("speech_pad_ms", a.vad_pad_ms)) if v is not None} or None
+    print(f"[fw] vad={not a.no_vad} params={vad_params} word_ts={a.word_ts}", flush=True)
 
     # temperature fallback: KHONG truyen -> giu mac dinh (0, 0.2, 0.4, 0.6, 0.8, 1.0) cua faster-whisper
     segments, info = model.transcribe(
@@ -46,6 +61,8 @@ def main() -> None:
         language=a.language,
         beam_size=a.beam,
         vad_filter=not a.no_vad,
+        vad_parameters=vad_params,
+        word_timestamps=a.word_ts,
         condition_on_previous_text=False,
     )
     print(f"[fw] audio {info.duration:.1f}s, bat dau giai ma...", flush=True)
