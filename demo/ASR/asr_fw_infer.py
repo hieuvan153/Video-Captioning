@@ -33,6 +33,7 @@ def main() -> None:
     ap.add_argument("--language", default="en")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--compute_type", default="float16")
+    ap.add_argument("--no_vad", action="store_true", help="tat VAD Silero (mac dinh van bat - giu nguyen hanh vi 1a)")
     a = ap.parse_args()
 
     t0 = time.time()
@@ -44,7 +45,7 @@ def main() -> None:
         a.audio,
         language=a.language,
         beam_size=a.beam,
-        vad_filter=True,
+        vad_filter=not a.no_vad,
         condition_on_previous_text=False,
     )
     print(f"[fw] audio {info.duration:.1f}s, bat dau giai ma...", flush=True)
