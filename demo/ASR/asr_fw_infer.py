@@ -22,8 +22,14 @@ FW_LARGE_V3_LOCAL = ("/data/ndloc_bk/hf_cache/models--Systran--faster-whisper-la
                      "snapshots/edaa852ec7e145841d8ffdb056a99866b5f0a478")
 
 
-def split_words(words: list[dict], gap: float | None, max_s: float | None) -> list[list[dict]]:
-    """Gom moc tu thanh cum: ngat truoc mot tu neu khoang lang truoc no >= gap, hoac cum se dai qua max_s."""
+def split_words(words: list[dict], gap: float | None, max_s: float | None,
+                min_s: float | None = 1.0) -> list[list[dict]]:
+    """Gom moc tu thanh cum: ngat truoc mot tu neu khoang lang truoc no >= gap, hoac cum se dai qua max_s.
+
+    min_s la chan an toan cho NGUOI XEM, khong phai cho thuoc do. Thuoc neo-theo-cue thuong cho viec
+    cat nho vo han (do duoc: cat doi moi cue van chrF 100,00), nen toi uu theo rieng no se ra phu de
+    nhay lien tuc khong ai doc kip. Cum ngan hon min_s duoc gop nguoc vao cum truoc.
+    """
     out: list[list[dict]] = []
     cur: list[dict] = []
     for w in words:
@@ -34,17 +40,28 @@ def split_words(words: list[dict], gap: float | None, max_s: float | None) -> li
         cur.append(w)
     if cur:
         out.append(cur)
-    return out
+    if min_s is None:
+        return out
+    keep: list[list[dict]] = []
+    for g in out:
+        if keep and g[-1]["e"] - g[0]["s"] < min_s:
+            keep[-1].extend(g)          # qua ngan de doc kip -> gop nguoc vao cum truoc
+        else:
+            keep.append(g)
+    return keep
 
 
 def selftest() -> None:
     W = lambda s, e, t: {"s": s, "e": e, "w": t}
     ws = [W(0, .5, "a"), W(.6, 1., "b"), W(2., 2.4, "c")]        # khoang lang 1.0s truoc "c"
-    assert [len(g) for g in split_words(ws, 0.4, None)] == [2, 1]
-    assert [len(g) for g in split_words(ws, None, None)] == [3]  # khong nguong -> mot cum
-    assert [len(g) for g in split_words(ws, None, 1.0)] == [2, 1]  # tran 1.0s cat truoc "c"
-    assert split_words([], 0.4, 3.0) == []
-    assert [len(g) for g in split_words(ws, 5.0, 99)] == [3]     # nguong qua rong -> khong cat
+    assert [len(g) for g in split_words(ws, 0.4, None, None)] == [2, 1]
+    assert [len(g) for g in split_words(ws, None, None, None)] == [3]  # khong nguong -> mot cum
+    assert [len(g) for g in split_words(ws, None, 1.0, None)] == [2, 1]  # tran 1.0s cat truoc "c"
+    assert split_words([], 0.4, 3.0, None) == []
+    assert [len(g) for g in split_words(ws, 5.0, 99, None)] == [3]   # nguong qua rong -> khong cat
+    # chan doc duoc: cum "c" chi dai 0.4s < 1.0s -> phai gop nguoc, khong duoc de rieng
+    assert [len(g) for g in split_words(ws, 0.4, None, 1.0)] == [3]
+    assert [len(g) for g in split_words(ws, 0.4, None, 0.3)] == [2, 1]  # ha chan thi lai tach
     print("selftest OK")
 
 
@@ -76,6 +93,7 @@ def main() -> None:
     # chieu no phu -> cue dai bi nhan ban text -> chrF tut. Cat lai theo moc tu chua khoang lang.
     ap.add_argument("--split_gap_s", type=float, default=None, help="tach cue khi khoang lang giua 2 tu >= nguong (can --word_ts)")
     ap.add_argument("--max_cue_s", type=float, default=None, help="tran do dai cue, tach tai tu ke tiep (can --word_ts)")
+    ap.add_argument("--min_cue_s", type=float, default=1.0, help="san do dai cue cho NGUOI XEM doc kip; manh ngan hon bi gop nguoc")
     ap.add_argument("--words_json", default=None, help="ghi kem moc tu ra JSON de cat lai offline, khoi chay lai ASR")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
@@ -110,7 +128,7 @@ def main() -> None:
             if a.word_ts and getattr(s, "words", None) else []
         all_words.extend(words)
         pieces = ([(g[0]["s"], g[-1]["e"], "".join(w["w"] for w in g).strip())
-                   for g in split_words(words, a.split_gap_s, a.max_cue_s)]
+                   for g in split_words(words, a.split_gap_s, a.max_cue_s, a.min_cue_s)]
                   if words and (a.split_gap_s or a.max_cue_s)
                   else [(float(s.start), float(s.end), (s.text or "").strip())])
         for start, end, text in pieces:
