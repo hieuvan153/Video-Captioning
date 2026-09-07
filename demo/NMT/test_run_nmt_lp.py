@@ -29,6 +29,9 @@ run_nmt.translate_en2vi(subs, FakeModel(), FakeTok(), "cpu", batch_size=8,
                         num_beams=5, length_penalty=4.0)
 assert seen["length_penalty"] == 4.0, seen
 assert seen["num_beams"] == 5, seen
+# lp=4.0 chi an toan khi early_stopping=True; doi thanh False/"never" thi mBART lap chu
+# (do 08/09/2026: 12885 tu -> 223477 tu, BLEU 19.15 -> 0.99)
+assert seen["early_stopping"] is True, seen
 
 sys.argv = ["run_nmt.py", "--input_srt", "x", "--output_srt", "y", "--length_penalty", "4.0"]
 assert run_nmt.parse_args().length_penalty == 4.0

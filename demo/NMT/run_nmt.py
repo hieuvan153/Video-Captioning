@@ -117,6 +117,10 @@ def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64
                 num_beams=num_beams,
                 length_penalty=length_penalty,
                 max_length=128,
+                # DUNG GO: voi length_penalty=4.0, early_stopping=True giu hinh phat o buoc
+                # XEP HANG cac gia thuyet da hoan chinh. Doi thanh False/"never" thi hinh phat
+                # di vao tieu chi dung -> beam chay toi max_length va lap chu:
+                # do 08/09/2026 tren Ode to Joy: 12885 tu -> 223477 tu, BLEU 19.15 -> 0.99.
                 early_stopping=True
             )
 
