@@ -30,16 +30,37 @@ def load(p: str) -> list[srt.Subtitle]:
         return list(srt.parse(f.read()))
 
 
-def overlap_text(ref: list[srt.Subtitle], other: list[srt.Subtitle]) -> list[str]:
-    """Voi moi cue tham chieu, noi text cac cue cua `other` giao thoi gian voi no."""
+def overlap_text(ref: list[srt.Subtitle], other: list[srt.Subtitle],
+                 min_ov: float = 0.0) -> list[str]:
+    """Voi moi cue tham chieu, noi text cac cue cua `other` giao thoi gian voi no.
+
+    min_ov = phan giao TOI THIEU (giay) moi tinh la trung. Mac dinh 0.0 = luat cu, giu nguyen
+    moi con so da cong bo. Nup calibration, khong phai mac dinh moi: do 07/09, o nguong 0 thi
+    chinh BAN THAM CHIEU EN cua NGUOI (phu de chuyen nghiep cung phim) cham voi thuoc VI ra
+    ref/cue = 1,50 - te hon arm may 1,19 - chi vi duoi cue EN tran qua bien VI, 41% truong hop
+    tran duoi 0,2 s. Nang nguong len 0,2 s thi con 0,97, dung bang moc nguoi. Tuc luat "giao
+    mot phan nghin giay cung tinh" thuong cue NGAN va phat do dai cue dung nhip nguoi.
+    """
     o = [(s.start.total_seconds(), s.end.total_seconds(),
           re.sub(r"\s+", " ", s.content).strip()) for s in other]
     out = []
     for r in ref:
         lo, hi = r.start.total_seconds(), r.end.total_seconds()
-        hit = [t for (a, b, t) in o if a < hi and b > lo and t]
+        hit = [t for (a, b, t) in o if min(b, hi) - max(a, lo) > min_ov and t]
         out.append(" ".join(hit))
     return out
+
+
+def selftest() -> None:
+    from datetime import timedelta as T
+    C = lambda a, b, t: srt.Subtitle(index=0, start=T(seconds=a), end=T(seconds=b), content=t)
+    ref = [C(0, 1, "A"), C(1, 2, "B")]
+    hyp = [C(0, 1.05, "x")]                       # tran 0.05s sang cue B
+    assert overlap_text(ref, hyp) == ["x", "x"], "nguong 0: tran mot chut van bi dan hai lan"
+    assert overlap_text(ref, hyp, 0.2) == ["x", ""], "nguong 0.2s: tran nho khong con tinh"
+    assert overlap_text(ref, [C(5, 6, "z")]) == ["", ""]          # roi hoan toan
+    assert overlap_text(ref, [C(0, 2, "y")], 0.2) == ["y", "y"]   # trum that thi van tinh ca hai
+    print("selftest OK")
 
 
 def main() -> None:
@@ -48,12 +69,18 @@ def main() -> None:
     ap.add_argument("--arms", nargs="+", required=True); ap.add_argument("--base")
     ap.add_argument("--no_comet", action="store_true"); ap.add_argument("--n", type=int, default=1000)
     ap.add_argument("--report")
+    ap.add_argument("--min_overlap_s", type=float, default=0.0,
+                    help="phan giao toi thieu moi tinh la trung cue (0.0 = luat cu)")
+    ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
+    if a.selftest:
+        return selftest()
 
     ref = load(a.ref)
     R = [re.sub(r"\s+", " ", s.content).strip() for s in ref]
-    S = overlap_text(ref, load(a.src_en))
-    arms = {k: overlap_text(ref, load(v)) for k, v in (x.split("=", 1) for x in a.arms)}
+    S = overlap_text(ref, load(a.src_en), a.min_overlap_s)
+    arms = {k: overlap_text(ref, load(v), a.min_overlap_s)
+            for k, v in (x.split("=", 1) for x in a.arms)}
     keep = [i for i in range(len(R)) if R[i] and S[i]]
     print(f"doan cham: {len(keep)}/{len(R)} cue tham chieu (bo cue khong co nguon EN)", flush=True)
 
