@@ -126,8 +126,12 @@ def main() -> None:
 
     subs: list[srt.Subtitle] = []
     all_words: list[dict] = []
-    for s in segments:
-        words = [{"s": float(w.start), "e": float(w.end), "w": w.word} for w in (s.words or ())] \
+    for si, s in enumerate(segments):
+        # "seg" = so hieu segment cua Whisper. BAT BUOC phai luu: do 07/09, xay lai cue tu danh sach
+        # moc tu PHANG (vut bien segment) cho ra cue THO hon ban goc (1440 vs 1939 cue, chrF 67.59 vs
+        # 73.24). Bo tach cua Whisper min hon luat "lang >= gap"; phep dung la CHIA THEM trong tung
+        # segment, khong bao gio gop qua bien. Vong lap nay da lam dung; words_json phai giu duoc dau vet.
+        words = [{"s": float(w.start), "e": float(w.end), "w": w.word, "seg": si} for w in (s.words or ())] \
             if a.word_ts and getattr(s, "words", None) else []
         all_words.extend(words)
         pieces = ([(g[0]["s"], g[-1]["e"], "".join(w["w"] for w in g).strip())
