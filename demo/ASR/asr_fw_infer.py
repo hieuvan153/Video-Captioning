@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import json
 import os
 import time
 
@@ -19,6 +20,32 @@ from faster_whisper import WhisperModel
 
 FW_LARGE_V3_LOCAL = ("/data/ndloc_bk/hf_cache/models--Systran--faster-whisper-large-v3/"
                      "snapshots/edaa852ec7e145841d8ffdb056a99866b5f0a478")
+
+
+def split_words(words: list[dict], gap: float | None, max_s: float | None) -> list[list[dict]]:
+    """Gom moc tu thanh cum: ngat truoc mot tu neu khoang lang truoc no >= gap, hoac cum se dai qua max_s."""
+    out: list[list[dict]] = []
+    cur: list[dict] = []
+    for w in words:
+        if cur and ((gap is not None and w["s"] - cur[-1]["e"] >= gap)
+                    or (max_s is not None and w["e"] - cur[0]["s"] > max_s)):
+            out.append(cur)
+            cur = []
+        cur.append(w)
+    if cur:
+        out.append(cur)
+    return out
+
+
+def selftest() -> None:
+    W = lambda s, e, t: {"s": s, "e": e, "w": t}
+    ws = [W(0, .5, "a"), W(.6, 1., "b"), W(2., 2.4, "c")]        # khoang lang 1.0s truoc "c"
+    assert [len(g) for g in split_words(ws, 0.4, None)] == [2, 1]
+    assert [len(g) for g in split_words(ws, None, None)] == [3]  # khong nguong -> mot cum
+    assert [len(g) for g in split_words(ws, None, 1.0)] == [2, 1]  # tran 1.0s cat truoc "c"
+    assert split_words([], 0.4, 3.0) == []
+    assert [len(g) for g in split_words(ws, 5.0, 99)] == [3]     # nguong qua rong -> khong cat
+    print("selftest OK")
 
 
 def main() -> None:
@@ -44,7 +71,16 @@ def main() -> None:
     # gong lai bien segment theo DTW cross-attention muc tu. Do 07/09: lech |start| trung binh cua
     # cut&merge la 0.48s, cua no-VAD la 1.14s - do lech nay moi la thu an diem chrF/COMET.
     ap.add_argument("--word_ts", action="store_true")
+    # Nup calibration cho HINH DANG cue. Do 07/09: 60.8% cue cua Whisper trum >=2 cue tham chieu
+    # (ban medium-FT thang chi 39.7%). Thuoc neo-theo-cue dan text cua mot cue hyp vao MOI cue tham
+    # chieu no phu -> cue dai bi nhan ban text -> chrF tut. Cat lai theo moc tu chua khoang lang.
+    ap.add_argument("--split_gap_s", type=float, default=None, help="tach cue khi khoang lang giua 2 tu >= nguong (can --word_ts)")
+    ap.add_argument("--max_cue_s", type=float, default=None, help="tran do dai cue, tach tai tu ke tiep (can --word_ts)")
+    ap.add_argument("--words_json", default=None, help="ghi kem moc tu ra JSON de cat lai offline, khoi chay lai ASR")
+    ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
+    if a.selftest:
+        return selftest()
 
     t0 = time.time()
     print(f"[fw] nap model {a.model} ({a.device}/{a.compute_type})...", flush=True)
@@ -68,18 +104,31 @@ def main() -> None:
     print(f"[fw] audio {info.duration:.1f}s, bat dau giai ma...", flush=True)
 
     subs: list[srt.Subtitle] = []
+    all_words: list[dict] = []
     for s in segments:
-        text = (s.text or "").strip()
-        if not text:
-            continue
-        start = float(s.start)
-        end = max(float(s.end), start + 0.01)   # tranh cue rong 0 giay -> film_ref_anchored bo qua
-        subs.append(srt.Subtitle(index=len(subs) + 1,
-                                 start=datetime.timedelta(seconds=start),
-                                 end=datetime.timedelta(seconds=end),
-                                 content=text))
-        if len(subs) % 100 == 0:
-            print(f"[fw] {len(subs)} cue, toi {end:.0f}s / {info.duration:.0f}s", flush=True)
+        words = [{"s": float(w.start), "e": float(w.end), "w": w.word} for w in (s.words or ())] \
+            if a.word_ts and getattr(s, "words", None) else []
+        all_words.extend(words)
+        pieces = ([(g[0]["s"], g[-1]["e"], "".join(w["w"] for w in g).strip())
+                   for g in split_words(words, a.split_gap_s, a.max_cue_s)]
+                  if words and (a.split_gap_s or a.max_cue_s)
+                  else [(float(s.start), float(s.end), (s.text or "").strip())])
+        for start, end, text in pieces:
+            if not text:
+                continue
+            end = max(end, start + 0.01)   # tranh cue rong 0 giay -> film_ref_anchored bo qua
+            subs.append(srt.Subtitle(index=len(subs) + 1,
+                                     start=datetime.timedelta(seconds=start),
+                                     end=datetime.timedelta(seconds=end),
+                                     content=text))
+            if len(subs) % 100 == 0:
+                print(f"[fw] {len(subs)} cue, toi {end:.0f}s / {info.duration:.0f}s", flush=True)
+
+    if a.words_json and all_words:
+        os.makedirs(os.path.dirname(os.path.abspath(a.words_json)) or ".", exist_ok=True)
+        with open(a.words_json, "w", encoding="utf-8") as f:
+            json.dump(all_words, f, ensure_ascii=False)
+        print(f"[fw] ghi {len(all_words)} moc tu -> {a.words_json}", flush=True)
 
     out_dir = os.path.dirname(os.path.abspath(a.out_srt))
     if out_dir:
