@@ -68,6 +68,13 @@ def parse_args():
         help="So beam khi giai ma. Mac dinh 1 (greedy) = dung giao thuc cua moc 'rough', dung doi."
     )
     parser.add_argument(
+        "--length_penalty",
+        type=float,
+        default=1.0,
+        help="mBART sinh tieng Viet chi gian 1.097 lan so voi tieng Anh, trong khi nguoi gian 1.196. "
+             "Dat 4.0 de khop ti le -> chrF 38.29 -> 39.55, COMET 0.7512 -> 0.7547. Mac dinh 1.0 = hanh vi cu.",
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default="cuda" if torch.cuda.is_available() else "cpu",
@@ -75,7 +82,7 @@ def parse_args():
     )
     return parser.parse_args()
 
-def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64, num_beams=1):
+def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64, num_beams=1, length_penalty=1.0):
     """
     Dịch thô danh sách phụ đề từ tiếng Anh sang tiếng Việt dựa theo logic file gốc.
     """
@@ -108,6 +115,7 @@ def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64
                 **inputs,
                 decoder_start_token_id=tokenizer_en2vi.lang_code_to_id["vi_VN"],
                 num_beams=num_beams,
+                length_penalty=length_penalty,
                 max_length=128,
                 early_stopping=True
             )
@@ -168,7 +176,7 @@ def main():
         return
 
     # 3. Tiến hành dịch thô
-    print(f"✍️ Đang thực hiện dịch thô phụ đề... (num_beams={args.num_beams})")
+    print(f"✍️ Đang thực hiện dịch thô phụ đề... (num_beams={args.num_beams}, length_penalty={args.length_penalty})")
     start_time = time.time()
     
     translated_subs = translate_en2vi(
@@ -177,7 +185,8 @@ def main():
         tokenizer_en2vi,
         args.device,
         batch_size=args.batch_size,
-        num_beams=args.num_beams
+        num_beams=args.num_beams,
+        length_penalty=args.length_penalty
     )
     
     end_time = time.time()
