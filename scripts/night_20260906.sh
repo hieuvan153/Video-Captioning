@@ -37,7 +37,7 @@ export TOKENIZERS_PARALLELISM=false
 export PYTHONUNBUFFERED=1
 
 DRY_RUN=${DRY_RUN:-0}
-DEADLINE=$(date -d "2026-09-07 12:00" +%s)   # sau moc nay: bo qua chang optional (P5, P6 phu)
+DEADLINE=$(date -d "${DEADLINE_AT:-2026-09-08 12:00}" +%s)   # sau moc nay: bo qua chang optional (P5, P6 phu)
 
 mkdir -p "$OUT/logs" "$OUT/scratch"
 
