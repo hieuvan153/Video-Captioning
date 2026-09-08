@@ -39,7 +39,12 @@ def parse_args():
     parser.add_argument("--cache_dir", type=str, default=os.path.join(ROOT_DIR, "cache"), help="Hugging Face cache directory")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for deterministic inference")
     parser.add_argument("--vlm_fps", type=float, default=1, help="Frame sampling rate for VideoLLaMA3")
-    parser.add_argument("--llm_batch_size", type=int, default=10, help="Batch size for Gemma3 subtitle refinement")
+    parser.add_argument("--llm_batch_size", type=int, default=1,
+                        help="Batch size for Gemma3 refinement. >1 lam mo hinh tra ve lech dong "
+                             "(31,8%% dong hong o batch=10) - dung tang.")
+    parser.add_argument("--arch", choices=("v2", "legacy"), default="v2",
+                        help="v2 (mac dinh): ASR -> mBART (beam5, lp4) -> SRT, 3 tang. "
+                             "legacy: 6 tang co ca scene_seg + VLM + Gemma refine.")
     return parser.parse_args()
 
 def free_gpu_memory():
@@ -68,6 +73,11 @@ def step1_extract_audio(video_path, audio_path):
 
 def step2_run_asr(audio_path, output_dir, base_name):
     print("\n=== STEP 2: Running ASR (Whisper + VAD) ===", flush=True)
+    # ASR giu nguyen greedy (13,7 phut/phim). Da do arm "a2" (ASR_TEMPS=0,0.2..1.0 + ASR_BEAM=5):
+    # WER 16,73 -> 15,93 va chrF san pham chi +0,38 so greedy, doi lai 125,8 phut ASR - khong dang.
+    # Ai muon a2 thi dat 2 bien moi truong do truoc khi chay, asr_movie_infer.py doc chung luc import.
+    # faster-whisper large-v3 da thu va loai: WER 20,05 (truot cong G1); ban tot nhat
+    # --no_vad --word_ts (WER 12,69) van thua o tang san pham (BLEU -2,89 / COMET -0,0164) vi pha luoi cue.
     english_srt_path = os.path.join(output_dir, f"{base_name}.(Tiếng Anh).srt")
     if os.path.exists(english_srt_path):
         print(f"English SRT already exists: {english_srt_path}. Skipping ASR.", flush=True)
@@ -267,25 +277,30 @@ def main():
     english_srt_path = step2_run_asr(audio_path, args.output_dir, base_name)
     durations["Step 2: Run ASR (Whisper)"] = time.time() - t0
 
-    # Step 3: Run Scene Segmentation (Subprocess)
-    t0 = time.time()
-    step3_run_scene_seg(args.video_path, scenes_json_path, cut_scenes_dir)
-    durations["Step 3: Scene Segmentation"] = time.time() - t0
+    # Step 3-4: chi chay o kien truc legacy. Tang refine (step 6) do ra CO HAI
+    # (chrF -1,38 [-2,00; -0,77] / COMET -0,0151), ma scene_seg + VLM chi ton tai de
+    # nuoi no -> v2 bo ca ba, tiet kiem 103,6 phut. Code giu nguyen, chi khong goi.
+    if args.arch == "legacy":
+        t0 = time.time()
+        step3_run_scene_seg(args.video_path, scenes_json_path, cut_scenes_dir)
+        durations["Step 3: Scene Segmentation"] = time.time() - t0
 
-    # Step 4: Run VLM
-    t0 = time.time()
-    step4_run_vlm(cut_scenes_dir, scenes_json_path, vlm_json_path, args.cache_dir, args.vlm_fps)
-    durations["Step 4: VLM Context Captioning"] = time.time() - t0
+        t0 = time.time()
+        step4_run_vlm(cut_scenes_dir, scenes_json_path, vlm_json_path, args.cache_dir, args.vlm_fps)
+        durations["Step 4: VLM Context Captioning"] = time.time() - t0
 
     # Step 5: Run NMT
     t0 = time.time()
     step5_run_nmt(english_srt_path, rough_srt_path, args.cache_dir)
     durations["Step 5: NMT Translation (MBart)"] = time.time() - t0
 
-    # Step 6: Run LLM refinement
-    t0 = time.time()
-    step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_path, args.cache_dir, args.llm_batch_size)
-    durations["Step 6: LLM Refinement (Gemma3)"] = time.time() - t0
+    # Step 6: Run LLM refinement (chi legacy)
+    final_srt_path = rough_srt_path
+    if args.arch == "legacy":
+        t0 = time.time()
+        step6_run_llm(english_srt_path, rough_srt_path, vlm_json_path, output_srt_path, args.cache_dir, args.llm_batch_size)
+        durations["Step 6: LLM Refinement (Gemma3)"] = time.time() - t0
+        final_srt_path = output_srt_path
 
     total_time = time.time() - t_start
     print(f"\n=========================================")
@@ -294,6 +309,8 @@ def main():
     print("📊 Step Execution Time Breakdown:")
     for step_name, elapsed in durations.items():
         print(f" - {step_name}: {elapsed/60:.2f} min ({elapsed:.1f}s)")
+    print(f"=========================================")
+    print(f"📄 Phu de cuoi cung ({args.arch}): {final_srt_path}")
     print(f"=========================================", flush=True)
 
 if __name__ == "__main__":
