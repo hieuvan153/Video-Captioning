@@ -33,7 +33,6 @@ if ROOT_DIR not in sys.path:
 os.environ.setdefault("HF_HOME", os.path.join(ROOT_DIR, "cache", "huggingface"))
 
 from EVAL.run_eval import load_srt_lines  # noqa: E402
-from LLM.scene_assign import find_best_scene  # noqa: E402
 
 GT_DIR = os.path.join(os.path.dirname(ROOT_DIR), "data",
                       "en-vi-speaker-with-time-pronouns")
@@ -45,6 +44,9 @@ def _mid(a: float, b: float) -> float:
 
 def scene_texts(mdir: str, movie: str, arm: str):
     """(src, hyp, ref) da gop theo scene — chi scene co ca hyp lan ref."""
+    # import muon: kien truc v2 bo tang scene_seg -> LLM/scene_assign.py khong con.
+    # Chi ham nay can no; film_score.py chi dung pronoun_sets_scene nen van import duoc.
+    from LLM.scene_assign import find_best_scene
     with open(os.path.join(mdir, "captions.json"), encoding="utf-8") as f:
         scenes = json.load(f)
     import srt

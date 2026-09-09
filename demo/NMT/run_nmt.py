@@ -75,6 +75,16 @@ def parse_args():
              "Dat 4.0 de khop ti le -> chrF 38.29 -> 39.55, COMET 0.7512 -> 0.7547. Mac dinh 1.0 = hanh vi cu.",
     )
     parser.add_argument(
+        "--mbr",
+        type=int,
+        default=0,
+        help="Minimum Bayes Risk: sinh K ung vien bang lay mau roi chon ung vien co chrF trung binh "
+             "cao nhat so voi cac ung vien con lai. 0 = tat (dung beam nhu cu). Bo qua --num_beams/"
+             "--length_penalty khi bat."
+    )
+    parser.add_argument("--mbr_top_p", type=float, default=0.9, help="top-p khi lay mau ung vien MBR.")
+    parser.add_argument("--seed", type=int, default=0, help="Seed cho lay mau MBR (tai lap duoc).")
+    parser.add_argument(
         "--device",
         type=str,
         default="cuda" if torch.cuda.is_available() else "cpu",
@@ -82,7 +92,32 @@ def parse_args():
     )
     return parser.parse_args()
 
-def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64, num_beams=1, length_penalty=1.0):
+
+def pick_mbr(cands):
+    """Chon ung vien co chrF trung binh cao nhat so voi CA tap ung vien (ke ca ban sao).
+
+    Ban sao duoc giu lam pseudo-reference nen ung vien nao model sinh lai nhieu lan
+    duoc cong diem — dung tinh than MBR (ky vong tren phan bo mo hinh), khong phai bug.
+    """
+    import sacrebleu
+    cands = [c.strip() for c in cands if c.strip()]
+    if not cands:
+        return ""
+    uniq = list(dict.fromkeys(cands))
+    if len(uniq) == 1:
+        return uniq[0]
+    return max(uniq, key=lambda c: sum(sacrebleu.sentence_chrf(c, [o]).score for o in cands))
+
+
+def _selftest_mbr():
+    a = ["Toi yeu ban", "Toi yeu ban", "Con meo ngoi tren tham"]
+    assert pick_mbr(a) == "Toi yeu ban", "ban sao phai keo ket qua ve phia dong thuan"
+    assert pick_mbr(["", "  "]) == ""
+    assert pick_mbr(["x"]) == "x"
+    print("selftest pick_mbr OK")
+
+def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64, num_beams=1,
+                    length_penalty=1.0, mbr=0, mbr_top_p=0.9, seed=0):
     """
     Dịch thô danh sách phụ đề từ tiếng Anh sang tiếng Việt dựa theo logic file gốc.
     """
@@ -101,7 +136,7 @@ def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64
     
     # 2. Dịch tất cả các câu theo từng batch
     all_translations = []
-    for i in range(0, len(all_sentences), batch_size):
+    for i in tqdm(range(0, len(all_sentences), batch_size), desc="dich"):
         batch = all_sentences[i:i + batch_size]
         inputs = tokenizer_en2vi(
             batch,
@@ -109,6 +144,26 @@ def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64
             truncation=True,
             return_tensors="pt"
         ).to(device)
+
+        if mbr:
+            torch.manual_seed(seed + i)
+            # num_beams >= mbr  -> lay ung vien tu BEAM (giu duoc loi cua length_penalty),
+            # nguoc lai         -> lay mau top-p. Ung vien beam manh hon han tren phim thu 3.
+            extra = (dict(num_beams=num_beams, length_penalty=length_penalty, early_stopping=True)
+                     if num_beams >= mbr else
+                     # num_beams=1 phai dat tuong minh: generation_config.json cua mBART co
+                     # san num_beams=5 -> transformers bao num_return_sequences > num_beams.
+                     dict(do_sample=True, num_beams=1, top_p=mbr_top_p))
+            with torch.inference_mode():
+                output_ids = model_en2vi.generate(
+                    **inputs,
+                    decoder_start_token_id=tokenizer_en2vi.lang_code_to_id["vi_VN"],
+                    num_return_sequences=mbr, max_length=128, **extra,
+                )
+            decoded = tokenizer_en2vi.batch_decode(output_ids, skip_special_tokens=True)
+            all_translations.extend(pick_mbr(decoded[j * mbr:(j + 1) * mbr])
+                                    for j in range(len(batch)))
+            continue
 
         with torch.inference_mode():
             output_ids = model_en2vi.generate(
@@ -190,7 +245,10 @@ def main():
         args.device,
         batch_size=args.batch_size,
         num_beams=args.num_beams,
-        length_penalty=args.length_penalty
+        length_penalty=args.length_penalty,
+        mbr=args.mbr,
+        mbr_top_p=args.mbr_top_p,
+        seed=args.seed,
     )
     
     end_time = time.time()
