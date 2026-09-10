@@ -134,6 +134,15 @@ def _demo_align():
     assert merge_pron("T\u00f4i r\u1ea5t m\u1ec7t.", "T\u00f4i v\u00f4 c\u00f9ng m\u1ec7t.") == "T\u00f4i r\u1ea5t m\u1ec7t."
     # dai tu ghep hai tu
     assert merge_pron("C\u00f4 \u1ea5y \u0111\u1ebfn r\u1ed3i.", "Ch\u1ecb \u1ea5y \u0111\u1ebfn r\u1ed3i.") == "Ch\u1ecb \u1ea5y \u0111\u1ebfn r\u1ed3i."
+    # chunk_by_gap: cat o khoang lang > gap_s, gop toi target
+    import datetime as _dt
+    _S = lambda i, a, b: srt.Subtitle(i, _dt.timedelta(seconds=a), _dt.timedelta(seconds=b), "x")
+    _subs = [_S(1, 0, 1), _S(2, 1.2, 2), _S(3, 10, 11), _S(4, 11.2, 12), _S(5, 30, 31)]
+    assert [c["indices"] for c in chunk_by_gap(_subs, 3.0, 99)] == [[0, 1, 2, 3, 4]]
+    assert [c["indices"] for c in chunk_by_gap(_subs, 3.0, 2)] == [[0, 1], [2, 3], [4]]
+    assert [c["indices"] for c in chunk_by_gap(_subs, 100.0, 99)] == [[0, 1, 2, 3, 4]]
+    assert chunk_by_gap([], 3.0, 20) == []
+    assert all(c["caption"] == "None" for c in chunk_by_gap(_subs, 3.0, 2))
     print("align_lines demo OK")
 
 
@@ -141,7 +150,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Refine Vietnamese subtitles using Gemma-12B + scene context (BATCH).")
     parser.add_argument("--en_srt",   type=str, required=True)
     parser.add_argument("--vinai_srt",type=str, required=True)
-    parser.add_argument("--vlm_json", type=str, required=True)
+    parser.add_argument("--vlm_json", type=str, default=None,
+                        help="Caption cua VLM. Bo trong (hoac 'none') thi chia chunk theo "
+                             "khoang lang — kien truc v2 khong chay VLM.")
+    parser.add_argument("--chunk_gap_s", type=float, default=2.0,
+                        help="Cat chunk khi khoang lang giua hai cue vuot nguong nay (giay).")
+    parser.add_argument("--chunk_target", type=int, default=20,
+                        help="Gop cac manh lien tiep cho toi khi dat co nay (so cue).")
     parser.add_argument("--output_srt",type=str, required=True)
     parser.add_argument("--adapter_model_name", type=str, default="thevan2404/best_gemma_scene_context")
     parser.add_argument("--system_prompt", type=str, default=None,
@@ -154,6 +169,38 @@ def parse_args():
     parser.add_argument("--llm_batch_size", type=int, default=8,
                         help="Number of prompts to process in one GPU batch.")
     return parser.parse_args()
+
+
+def chunk_by_gap(subs, gap_s=2.0, target=20):
+    """Chia cue thanh chunk MA KHONG CAN VLM: cat o khoang lang > gap_s roi gop
+    cac manh lien tiep cho toi khi dat co target cue.
+
+    Kien truc v2 da bo tang scene_seg + VLM (tiet kiem ~104 phut), nhung
+    refine_llm.py von lay RANH GIOI chunk tu file caption cua VLM. Tran cua NOI DUNG
+    caption da do (+0,0117 PronF1, truot cong) — cai con thieu chi la cho cat.
+    Khoang lang trong thoai la cho cat re va co san.
+
+    Tra ve cung cau truc voi nhanh VLM (caption = "None") de phan sau dung chung.
+
+    Mac dinh gap=2,0s target=20 chon vi bam sat co chunk THAT cua VLM tren Ode to
+    Joy: VLM 95 chunk / trung vi 15 / tb 20,4 — gap2,0 cho 104 / 17 / 18,6.
+    """
+    if not subs:
+        return []
+    cuts = [0]
+    for i in range(len(subs) - 1):
+        if subs[i + 1].start.total_seconds() - subs[i].end.total_seconds() > gap_s:
+            cuts.append(i + 1)
+    cuts.append(len(subs))
+    pieces = [list(range(cuts[k], cuts[k + 1])) for k in range(len(cuts) - 1)]
+    merged = []
+    for pc in pieces:
+        if merged and len(merged[-1]) + len(pc) <= target:
+            merged[-1].extend(pc)
+        else:
+            merged.append(pc)
+    return [{"start_time": None, "end_time": None, "caption": "None", "indices": ix}
+            for ix in merged]
 
 
 def find_best_scene(midpoint, scenes):
@@ -177,7 +224,9 @@ def refine_subtitles(
     max_seq_length=2048,
     max_new_tokens=1024,
     llm_batch_size=8,
-    system_prompt=None
+    system_prompt=None,
+    chunk_gap_s=2.0,
+    chunk_target=20
 ):
     if cache_dir is None:
         cache_dir = os.path.join(ROOT_DIR, "cache")
@@ -199,25 +248,32 @@ def refine_subtitles(
     out_subs = [srt.Subtitle(index=s.index, start=s.start, end=s.end, content="")
                 for s in en_subs]
 
-    print(f"📂 Reading scene captions: {vlm_json_path}")
-    with open(vlm_json_path, "r", encoding="utf-8") as f:
-        vlm_scenes = json.load(f)
+    if not vlm_json_path or vlm_json_path.lower() == "none":
+        # Kien truc v2 khong chay VLM -> khong co ranh gioi scene. Cat theo khoang
+        # lang, cho ra chunk co co tuong duong (xem chunk_by_gap).
+        print(f"📂 Khong co VLM caption -> chia chunk theo khoang lang "
+              f"(gap>{chunk_gap_s}s, gop toi {chunk_target} cue).", flush=True)
+        scenes_data = chunk_by_gap(en_subs, chunk_gap_s, chunk_target)
+    else:
+        print(f"📖 Reading scene captions: {vlm_json_path}")
+        with open(vlm_json_path, "r", encoding="utf-8") as f:
+            vlm_scenes = json.load(f)
 
-    scenes_data = []
-    for idx, sc in enumerate(vlm_scenes):
-        scenes_data.append({
-            "start_time": sc.get("start_time"),
-            "end_time":   sc.get("end_time"),
-            "caption":    sc.get("caption", "").strip() or "None",
-            "indices":    []
-        })
+        scenes_data = []
+        for idx, sc in enumerate(vlm_scenes):
+            scenes_data.append({
+                "start_time": sc.get("start_time"),
+                "end_time":   sc.get("end_time"),
+                "caption":    sc.get("caption", "").strip() or "None",
+                "indices":    []
+            })
 
-    # ── Assign subtitles → scenes ────────────────────────────────────────────
-    for i, sub in enumerate(en_subs):
-        mid = (sub.start.total_seconds() + sub.end.total_seconds()) / 2.0
-        si  = find_best_scene(mid, scenes_data)
-        if si != -1:
-            scenes_data[si]["indices"].append(i)
+        # ── Assign subtitles → scenes ────────────────────────────────────────
+        for i, sub in enumerate(en_subs):
+            mid = (sub.start.total_seconds() + sub.end.total_seconds()) / 2.0
+            si  = find_best_scene(mid, scenes_data)
+            if si != -1:
+                scenes_data[si]["indices"].append(i)
 
     # ── Build prompt list ────────────────────────────────────────────────────
     prompts = []   # list of {"indices", "context", "raw_en", "vinai_sub"}
@@ -429,6 +485,8 @@ def main():
         output_srt_path=args.output_srt,
         adapter_model_name=args.adapter_model_name,
         system_prompt=args.system_prompt,
+        chunk_gap_s=args.chunk_gap_s,
+        chunk_target=args.chunk_target,
         cache_dir=args.cache_dir,
         max_seq_length=args.max_seq_length,
         max_new_tokens=args.max_new_tokens,
