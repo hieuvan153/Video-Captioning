@@ -83,7 +83,16 @@ def score(ref_path: str, en_path: str, arms: dict[str, str], use_comet: bool,
     ref_clean = clean_ref(ref_path)
     ref_subs = get_subs_from_srt(ref_clean)
     ref_text = " ".join(s.content for s in load(ref_clean))
-    en_lines = [re.sub(r"\s+", " ", s.content).strip() for s in load(en_path)]
+    en_subs = load(en_path)
+    en_lines = [re.sub(r"\s+", " ", s.content).strip() for s in en_subs]
+    if use_comet or use_comet_da:
+        # src/ref cua COMET ghep theo CHI SO cue cua --en: arm khac luoi la lech dong ma khong bao loi
+        # (--en = EN nguoi 1935 cue vs arm luoi ASR 1939 cue: chi 85 cap trung thoi gian -> COMET-DA 0,468).
+        grid = [(s.start, s.end) for s in en_subs]
+        bad = [k for k, p in arms.items() if [(s.start, s.end) for s in load(p)] != grid]
+        if bad:
+            raise SystemExit(f"COMET: arm {bad} khac luoi cue voi --en {en_path}. "
+                             "Truyen --en = SRT EN cung luoi voi arm (SRT ASR cua pipeline).")
     gold_lines = gold_src_lines(en_path, gold_en, *tmap) if gold_en else None
     cfg = {"raw": lambda x: x, "nopunc": clean_no_punc, "custom": clean_custom}
     comet_model = da_model = ref_lines = None
