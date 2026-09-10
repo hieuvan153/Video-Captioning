@@ -144,6 +144,10 @@ def parse_args():
     parser.add_argument("--vlm_json", type=str, required=True)
     parser.add_argument("--output_srt",type=str, required=True)
     parser.add_argument("--adapter_model_name", type=str, default="thevan2404/best_gemma_scene_context")
+    parser.add_argument("--system_prompt", type=str, default=None,
+                        help="Ghi de system prompt va BO khoi <Scene Context>. Dung cho adapter "
+                             "train khong co kenh caption, vi du v7: "
+                             "'Rewrite to natural Vietnamese subtitle.'")
     parser.add_argument("--cache_dir", type=str, default=os.path.join(ROOT_DIR, "cache"))
     parser.add_argument("--max_seq_length", type=int, default=2048)
     parser.add_argument("--max_new_tokens", type=int, default=1024)
@@ -172,7 +176,8 @@ def refine_subtitles(
     cache_dir=None,
     max_seq_length=2048,
     max_new_tokens=1024,
-    llm_batch_size=8
+    llm_batch_size=8,
+    system_prompt=None
 ):
     if cache_dir is None:
         cache_dir = os.path.join(ROOT_DIR, "cache")
@@ -263,7 +268,11 @@ def refine_subtitles(
     print("Tokenizing all prompts...")
     all_input_ids = []
     for item in prompts:
-        full_sys = (f"{base_system}\n"
+        # v7 tro di huan luyen KHONG co khoi <Scene Context> (kien truc v2 da cat
+        # tang VLM). Dua --system_prompt vao thi dung y nguyen chuoi do lam system va
+        # BO khoi Scene Context, khop dung dinh dang luc train. Cach chia chunk theo
+        # scene van giu nguyen nen so sanh giua cac adapter la cong bang.
+        full_sys = system_prompt or (f"{base_system}\n"
                     f"    <Scene Context>\n    {item['context']}\n    </Scene Context>")
         user_msg = (f"<English Dialogue>\n{item['raw_en']}\n</English Dialogue>\n"
                     f"<Rough Vietnamese Translation>\n{item['vinai_sub']}\n"
@@ -419,6 +428,7 @@ def main():
         vlm_json_path=args.vlm_json,
         output_srt_path=args.output_srt,
         adapter_model_name=args.adapter_model_name,
+        system_prompt=args.system_prompt,
         cache_dir=args.cache_dir,
         max_seq_length=args.max_seq_length,
         max_new_tokens=args.max_new_tokens,
