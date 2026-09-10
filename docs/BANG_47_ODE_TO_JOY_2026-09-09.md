@@ -335,10 +335,36 @@ Nửa sau khó hơn hẳn về xưng hô (PronF1 nền 0,640 so với 0,871) và
 chỗ tầng LLM đáng giá nhất**: +0,101 PronF1 và +2,60 BLEU. Nói cách khác, tầng LLM
 không tô điểm chỗ đã tốt, nó vá chỗ NMT hỏng.
 
-**Điều còn lại chưa đóng:** hyp/ref vẫn là 0,947. Nếu BP = 1 thì BLEU sẽ là 40,07,
-tức **còn 2,17 điểm nằm trong phần độ dài**. Muốn lấy phải để chính tầng LLM sinh
-tiếng Việt đầy đặn hơn (đổi lời nhắc / huấn luyện có ràng buộc độ dài), không lấy
-được bằng hậu xử lý.
+**Phần độ dài còn lại KHÔNG nằm ở tầng dịch nữa — nó là của ASR.** Đây là đính
+chính cho bản viết trước, vốn ghi "phải để tầng LLM sinh tiếng Việt đầy đặn hơn".
+Đếm thẳng số từ trên cả phim:
+
+| | số từ | tỉ lệ |
+|---|---|---|
+| Phụ đề EN của **người** | 11 664 | — |
+| Phụ đề EN do **ASR** sinh | 10 847 | **0,930** so với người |
+| Phụ đề VI của **người** | 13 950 | — |
+| VI của `pm0.90` | 13 125 | **0,941** so với người |
+
+Từ đó ra tỉ lệ giãn nở của riêng tầng dịch:
+
+| Arm | vi/en |
+|---|---|
+| Người dịch | 1,196 |
+| `v2_lp4` (nền) | 1,188 |
+| `tau_0.2` (LLM chưa khóa) | **1,159** |
+| **`pm0.90`** | **1,210** |
+
+Đọc bảng này thì cơ chế hiện rõ hẳn: mBART + lp4 vốn đã giãn gần đúng như người
+(1,188 so với 1,196). **Chính tầng LLM tinh chỉnh mới là thứ làm co lại** (1,159),
+và khóa độ dài kéo về 1,210 — nhỉnh hơn người một chút. Nói cách khác, **ở tầng
+dịch, dư địa độ dài đã hết**; ngưỡng 0,90 gần tối ưu vì đẩy tiếp sẽ giãn quá đà.
+
+Phần thiếu 5,9% còn lại thừa hưởng gần như nguyên vẹn từ ASR: 0,930 × 1,012 ≈ 0,941.
+**ASR bỏ mất 7% số từ tiếng Anh, và tầng dịch không thể bịa ra chữ chưa từng được
+nhận dạng.** Cả hai đòn bẩy ASR (lưới cue và nội dung) đều đã đo và chạm trần
+trước đó, nên `pm0.90` xem như đã ở sát trần thực dụng của pipeline này. Muốn lấy
+nốt 2,17 điểm phải nâng ASR, không phải nâng tầng dịch.
 
 ## 5. Câu chốt cho hội đồng
 
@@ -400,11 +426,13 @@ Nguyên nhân gốc có thật và đã đo: người dịch bên thứ 3 viết
 so với 1,105 của pipeline), còn LLM tinh chỉnh lại **rút ngắn** thêm.
 
 **"Còn bao nhiêu nữa mới hết dư địa?"**
-`pm0.90` có hyp/ref 0,947, tức BP 0,946. Nếu độ dài khớp hẳn thì BLEU sẽ là
-**40,07** — còn **2,17 điểm** nằm trong phần độ dài. Không lấy được bằng hậu xử
-lý; phải để chính tầng LLM sinh tiếng Việt đầy đặn hơn (đổi lời nhắc hoặc huấn
-luyện có ràng buộc độ dài). Trần trên của hướng "thêm bộ chọn ứng viên" thì đã đo
-bằng oracle nhìn trộm tham chiếu: chỉ 38,48 và tụt PronF1 (§4d).
+`pm0.90` có hyp/ref 0,947, nếu độ dài khớp hẳn thì BLEU sẽ là **40,07** — còn
+**2,17 điểm** nằm trong phần độ dài. Nhưng phần đó **không còn nằm ở tầng dịch**:
+tính riêng tỉ lệ giãn nở thì `pm0.90` đạt vi/en 1,210 so với 1,196 của người, tức
+đã giãn hơn người. Chỗ thiếu là ASR bỏ mất 7% số từ tiếng Anh (§4d). Hai đòn bẩy
+ASR đều đã chạm trần, nên đây là trần thực dụng của pipeline chứ không phải việc
+còn bỏ dở. Trần trên của hướng "thêm bộ chọn ứng viên" cũng đã đo bằng oracle nhìn
+trộm tham chiếu: chỉ 38,48 và tụt PronF1.
 
 **"Rò rỉ đáng bao nhiêu?"**
 Đo được hai lần, hai thước: 0,58–1,21 BLEU (giao thức 4.7, §4) và 0,61 BLEU /
