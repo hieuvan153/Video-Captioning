@@ -314,6 +314,27 @@ So `pm0.85` với `pm0.90`: chênh nhau trong sai số, `pm0.90` nhỉnh hơn �
    `pm0.90` đã đạt BP 0,9459 (bằng mức lp6) mà **giữ nguyên** độ chính xác 40,07.
    Khóa độ dài **thay thế** việc đẩy lp, không cộng dồn với nó.
 
+**Kiểm ổn định: chia đôi phim, đo hai nửa độc lập.** Câu hỏi hiển nhiên là
+"ngưỡng 0,90 có phải chỉnh vừa khít đúng phim này không". Cắt phim tại giây 2512,8
+(trung vị thời gian bắt đầu của cue tham chiếu) rồi chấm **riêng từng nửa** bằng
+đúng giao thức 4.7:
+
+| Arm | nửa đầu BLEU | nửa đầu PronF1 | nửa sau BLEU | nửa sau PronF1 |
+|---|---|---|---|---|
+| `v2_lp4` (nền) | 35,00 | 0,871 | 32,64 | 0,640 |
+| `tau_0.2` | 35,27 | 0,877 | 33,94 | 0,739 |
+| **`pm0.90`** | **36,08** | **0,880** | **35,24** | **0,741** |
+| ΔBLEU của khóa | **+1,08** | | **+2,60** | |
+
+**Thứ tự `v2_lp4` < `tau_0.2` < `pm0.90` giữ nguyên ở cả hai nửa**, đo hoàn toàn
+độc lập, nên hiệu ứng không phải trùng hợp của một lát cắt. Điểm tuyệt đối giữa
+hai nửa không so trực tiếp được với 37,90 của cả phim vì phép hoán vị tham chiếu
+chạy riêng trong từng nửa.
+
+Nửa sau khó hơn hẳn về xưng hô (PronF1 nền 0,640 so với 0,871) và **đó chính là
+chỗ tầng LLM đáng giá nhất**: +0,101 PronF1 và +2,60 BLEU. Nói cách khác, tầng LLM
+không tô điểm chỗ đã tốt, nó vá chỗ NMT hỏng.
+
 **Điều còn lại chưa đóng:** hyp/ref vẫn là 0,947. Nếu BP = 1 thì BLEU sẽ là 40,07,
 tức **còn 2,17 điểm nằm trong phần độ dài**. Muốn lấy phải để chính tầng LLM sinh
 tiếng Việt đầy đặn hơn (đổi lời nhắc / huấn luyện có ràng buộc độ dài), không lấy
