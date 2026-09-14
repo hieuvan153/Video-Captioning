@@ -8,7 +8,7 @@ import soundfile as sf
 from tqdm import tqdm
 import datetime
 import json
-import shutil
+import tempfile
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -51,19 +51,26 @@ def run(audio_path, out_dir = None, out_name = None):
     srt_name = name + ".(Tiếng Anh).srt"
     out_path = "output/" + srt_name if out_dir is None else os.path.join(out_dir, srt_name)
 
+    # WAV tam o thu muc rieng cua lan chay nay. Truoc day dung chung mot thu muc trong CWD: lan chay
+    # sau xoa file cua lan truoc -> lan truoc nhan dang nham audio ma khong bao loi.
+    out_dir_abs = os.path.dirname(os.path.abspath(out_path))
+    os.makedirs(out_dir_abs, exist_ok=True)
     print("Encoding audio...")
-    if os.path.exists("vad_chunks"):
-        shutil.rmtree("vad_chunks")
-
-    os.mkdir("vad_chunks")
-    ffmpeg.input(audio_path).output(
-        "vad_chunks/silero_temp.wav",
-        ar="16000",
-        ac="1",
-        acodec="pcm_s16le",
-        map_metadata="-1",
-        fflags="+bitexact",
-    ).overwrite_output().run(quiet=True)
+    with tempfile.TemporaryDirectory(dir=out_dir_abs) as tmp:
+        tmp_wav = os.path.join(tmp, "silero_temp.wav")
+        ffmpeg.input(audio_path).output(
+            tmp_wav,
+            ar="16000",
+            ac="1",
+            acodec="pcm_s16le",
+            map_metadata="-1",
+            fflags="+bitexact",
+        ).overwrite_output().run(quiet=True)
+        # Doc bang soundfile thay read_audio cua silero de khong phu thuoc torchaudio.
+        wav, sr = sf.read(tmp_wav, dtype='float32')
+    if sr != VAD_SR:
+        raise ValueError(f"Sampling rate of converted audio is {sr}, expected {VAD_SR}")
+    wav = torch.from_numpy(wav)
 
     print("Running VAD...")
     model, utils = torch.hub.load(
@@ -73,12 +80,6 @@ def run(audio_path, out_dir = None, out_name = None):
         source="local"
     )
     get_speech_timestamps, _, _, _, collect_chunks = utils
-
-    # Doc bang soundfile thay read_audio cua silero de khong phu thuoc torchaudio.
-    wav, sr = sf.read("vad_chunks/silero_temp.wav", dtype='float32')
-    if sr != VAD_SR:
-        raise ValueError(f"Sampling rate of vad_chunks/silero_temp.wav is {sr}, expected {VAD_SR}")
-    wav = torch.from_numpy(wav)
     t = get_speech_timestamps(wav, model, sampling_rate=VAD_SR, threshold=vad_threshold)
 
     # Dem 0,2 s dau / 1,3 s duoi (don vi mau) roi bo phan chong lan.
@@ -96,8 +97,6 @@ def run(audio_path, out_dir = None, out_name = None):
 
     # Cat audio theo chi so mau truoc, sau do moi doi u sang giay.
     chunk_audio_tensors = [collect_chunks(u[i], wav) for i in range(len(u))]
-
-    os.remove("vad_chunks/silero_temp.wav")
 
     # chunk_start/chunk_end: vi tri trong audio da ghep; offset: cong vao de ve thoi gian goc.
     for i in range(len(u)):

@@ -149,8 +149,8 @@ def parse_args():
     parser.add_argument("--cache_dir", type=str, default=os.path.join(ROOT_DIR, "cache"))
     parser.add_argument("--max_seq_length", type=int, default=2048)
     parser.add_argument("--max_new_tokens", type=int, default=1024)
-    parser.add_argument("--llm_batch_size", type=int, default=8,
-                        help="Number of prompts to process in one GPU batch.")
+    parser.add_argument("--llm_batch_size", type=int, default=1,
+                        help="So prompt moi batch. >1 lam model tra ve lech dong (31,8%% dong hong o batch=10).")
     return parser.parse_args()
 
 
@@ -197,7 +197,7 @@ def refine_subtitles(
     cache_dir=None,
     max_seq_length=2048,
     max_new_tokens=1024,
-    llm_batch_size=8,
+    llm_batch_size=1,
     system_prompt=None,
     chunk_gap_s=2.0,
     chunk_target=20

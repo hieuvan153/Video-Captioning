@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import time
 import argparse
 import srt
@@ -9,10 +10,11 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from nltk.tokenize import sent_tokenize
 import nltk
 
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', quiet=True)
+for _pkg in ("punkt", "punkt_tab"):  # nltk >= 3.9 can punkt_tab cho sent_tokenize
+    try:
+        nltk.data.find(f"tokenizers/{_pkg}")
+    except LookupError:
+        nltk.download(_pkg, quiet=True)
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOCAL_MBART = os.path.join(ROOT_DIR, "model/NMT/mbart_model")
@@ -123,8 +125,7 @@ def main():
 
     print(f"Doc phu de tieng Anh: {args.input_srt}")
     if not os.path.exists(args.input_srt):
-        print(f"Loi: file khong ton tai -> {args.input_srt}")
-        return
+        sys.exit(f"Loi: file khong ton tai -> {args.input_srt}")
 
     with open(args.input_srt, "r", encoding="utf-8") as f:
         subtitles = list(srt.parse(f.read()))
@@ -133,15 +134,11 @@ def main():
         sub.content = re.sub(r'\s+', ' ', sub.content).strip()
     print(f"Da load {len(subtitles)} phu de. Tai mo hinh {args.model_path} len {args.device}")
 
-    try:
-        tokenizer_en2vi = AutoTokenizer.from_pretrained(args.model_path, src_lang="en_XX", cache_dir=args.cache_dir)
-        model_en2vi = AutoModelForSeq2SeqLM.from_pretrained(args.model_path, cache_dir=args.cache_dir)
-        model_en2vi.to(args.device)
-        if "cuda" in args.device:
-            model_en2vi.half()
-    except Exception as e:
-        print(f"Loi khi tai mo hinh: {e}")
-        return
+    tokenizer_en2vi = AutoTokenizer.from_pretrained(args.model_path, src_lang="en_XX", cache_dir=args.cache_dir)
+    model_en2vi = AutoModelForSeq2SeqLM.from_pretrained(args.model_path, cache_dir=args.cache_dir)
+    model_en2vi.to(args.device)
+    if "cuda" in args.device:
+        model_en2vi.half()
 
     print(f"Dich (num_beams={args.num_beams}, length_penalty={args.length_penalty})")
     start_time = time.time()

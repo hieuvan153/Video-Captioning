@@ -17,7 +17,7 @@ HF_TOKEN=... /data/ndloc_bk/ntVan/demo_env/bin/python3 demo/LLM/refine_llm.py \
 | `--system_prompt` | không | cho adapter train không có khối `<Scene Context>` (v7) |
 | `--cache_dir` | `demo/cache` | |
 | `--max_seq_length`, `--max_new_tokens` | `2048`, `1024` | |
-| `--llm_batch_size` | `8` | **luôn truyền 1**: >1 làm lệch dòng |
+| `--llm_batch_size` | `1` | >1 làm lệch dòng, không tăng |
 
 Sau khi sinh:
 1. Gióng dòng LLM vào cue bằng quy hoạch động (`align_lines`, ngưỡng `ALIGN_MIN_RATIO = 0.20`), không bao giờ theo vị trí.
