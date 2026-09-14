@@ -120,6 +120,7 @@ def run(audio_path, out_dir = None, out_name = None):
                     r["avg_logprob"] -= 0.35
 
             del r["tokens"]
+            r["chunk"] = i  # seek ve 0 khong du de biet segment thuoc chunk nao (chunk rong/ngan)
             segment_info.append(r)
 
             if (
