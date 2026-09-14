@@ -21,10 +21,13 @@ if __name__ == "__main__":
         assert cut("/tmp/_d.srt", 50, "a", "/tmp/_a.srt") == (1, 3)
         assert cut("/tmp/_d.srt", 50, "b", "/tmp/_b.srt") == (2, 3)
         print("split_half demo OK"); sys.exit()
+    import os
     t = float(sys.argv[1]); half = sys.argv[2]
+    bases = [os.path.basename(p) for p in sys.argv[3:]]
+    dup = sorted({b for b in bases if bases.count(b) > 1})
+    if dup:
+        sys.exit(f"trung ten file {dup}: {half}_<ten> se ghi de nhau trong HALFDIR, doi ten arm truoc")
     for p in sys.argv[3:]:
-        import os
-        out = os.path.join(os.path.dirname(sys.argv[3]) or ".", "")
         base = os.path.basename(p)
         o = f"{os.environ['HALFDIR']}/{half}_{base}"
         n, tot = cut(p, t, half, o)

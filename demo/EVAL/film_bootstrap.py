@@ -23,6 +23,7 @@ import srt  # noqa: E402
 
 from EVAL.film_score import gold_src_lines  # noqa: E402
 from EVAL.thesis_score import pronoun_sets_scene  # noqa: E402
+from EVAL.film_ref_anchored import ci95  # noqa: E402
 
 
 def lines(p: str) -> list[str]:
@@ -79,8 +80,8 @@ def main() -> None:
         for _ in range(a.n):
             idx = [random.randrange(len(pairs)) for _ in pairs]
             d = fn([B[i] for i in idx]) - fn([A[i] for i in idx]); ds.append(d); wins += d > 0
-        ds.sort()
-        print(f"{name}: b-a = {d0:+.2f}  95%CI=[{ds[int(.025*a.n)]:+.2f}, {ds[int(.975*a.n)]:+.2f}]"
+        lo, hi = ci95(ds)
+        print(f"{name}: b-a = {d0:+.2f}  95%CI=[{lo:+.2f}, {hi:+.2f}]"
               f"  p(b<=a)={1-wins/a.n:.3f}  n_scenes={len(pairs)}", flush=True)
 
 

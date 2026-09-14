@@ -11,13 +11,9 @@ CLI:
 CHU Y GIO HAN:
   Metric chi so sanh cong bang GIUA cac arm DUNG CHUNG cach chia cue (e.g., moi arm
   sinh tu cung file rough SRT). Khi hai arm co granularity cue khac nhau ro ret
-  (arm ASR vs arm phu de chuan), overlap_text nhan ban text cua cue arm dai sang
-  nhieu cue tham chieu: tp va fp deu bi dem lap. Delta luc do phan anh ca do "nuot cue"
-  chu khong rieng do chinh xac dai tu.
-
-  Vi du: ref=[(0-2s,'Anh?'), (5-7s,'Em'), (8-10s,'Đi')], arm=[(0-10s,'Anh em')]
-  -> overlap_text cho hyp=['Anh em','Anh em','Anh em']
-  -> rows=[(1,1,0),(1,1,0),(0,2,0)] -> F1=0.5, trong khi "Anh em" co the dung toan bo.
+  (arm ASR vs arm phu de chuan), overlap_text chia tu cua cue arm dai theo ty le thoi gian
+  giao voi cac cue tham chieu (tu 14/09; truoc do nhan ban nguyen cau). Phep chia la xap xi,
+  nen delta van phan anh mot phan do "nuot/gop cue" chu khong rieng do chinh xac dai tu.
 """
 from __future__ import annotations
 
@@ -31,7 +27,7 @@ from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from EVAL.film_ref_anchored import load, overlap_text  # noqa: E402
+from EVAL.film_ref_anchored import load, overlap_text, percentile as _percentile  # noqa: E402
 from EVAL.pronoun_lexicon import extract_pronouns  # noqa: E402
 
 
@@ -50,19 +46,6 @@ def f1_of(rows: list[tuple[int, int, int]]) -> float:
     return 2 * tp / (2 * tp + fp + fn) if tp else 0.0
 
 
-def _percentile(sorted_vals: list[float], p: float) -> float:
-    """Phan vi p (0..1) tren danh sach DA SAP XEP, noi suy tuyen tinh giua 2 order
-    statistic ke nhau (quy uoc chuan, giong numpy.percentile mac dinh). Fix: ban cu
-    dung `sorted_vals[int(p * n)]` cho ca hai dau, lech 1 order statistic o dau tren
-    (vd n=1000, p=0.975 phai roi vao ~index 974.025 chu khong phai index 975)."""
-    m = len(sorted_vals)
-    if m == 1:
-        return sorted_vals[0]
-    pos = (m - 1) * p
-    lo = int(pos)
-    hi = min(lo + 1, m - 1)
-    frac = pos - lo
-    return sorted_vals[lo] + (sorted_vals[hi] - sorted_vals[lo]) * frac
 
 
 def bootstrap(rows_a, rows_b, n=1000, seed=42):

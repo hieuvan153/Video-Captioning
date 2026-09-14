@@ -26,6 +26,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
@@ -42,11 +43,18 @@ def _mid(a: float, b: float) -> float:
     return (a + b) / 2.0
 
 
+def find_best_scene(midpoint: float, scenes: list[dict]) -> int:
+    """Canh chua midpoint (so khop chat, khong lay canh gan nhat); -1 neu khong co.
+    Cung logic voi LLM/refine_llm.py (LLM/scene_assign.py cu chi co tren nhanh feat/*)."""
+    for idx, sc in enumerate(scenes):
+        s, e = sc.get("start_time"), sc.get("end_time")
+        if s is not None and e is not None and s <= midpoint <= e:
+            return idx
+    return -1
+
+
 def scene_texts(mdir: str, movie: str, arm: str):
     """(src, hyp, ref) da gop theo scene — chi scene co ca hyp lan ref."""
-    # import muon: kien truc v2 bo tang scene_seg -> LLM/scene_assign.py khong con.
-    # Chi ham nay can no; film_score.py chi dung pronoun_sets_scene nen van import duoc.
-    from LLM.scene_assign import find_best_scene
     with open(os.path.join(mdir, "captions.json"), encoding="utf-8") as f:
         scenes = json.load(f)
     import srt
@@ -103,7 +111,7 @@ _VI_PATTERNS = [re.compile(r"\b" + re.escape(t) + r"\b") for t in VI_PRONOUNS]
 
 
 def _extract_thesis(text: str) -> list[str]:
-    text = text.lower()
+    text = unicodedata.normalize("NFC", text).lower()
     found: list[str] = []
     for pat in _VI_PATTERNS:
         found.extend(pat.findall(text))

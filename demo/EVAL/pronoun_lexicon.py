@@ -4,6 +4,7 @@ Lexicon khoi tao tu quan sat dataset data/en-vi-speaker-with-time-pronouns;
 Task 3 co buoc calibration de bo sung term con thieu.
 """
 import re
+import unicodedata
 
 PRONOUN_TERMS: frozenset[str] = frozenset({
     # ngoi 1
@@ -40,7 +41,7 @@ _PATTERN = re.compile(
 
 def extract_pronouns(text: str) -> list[str]:
     """Tra ve list term (da lowercase) tim thay trong text, theo thu tu xuat hien."""
-    return [m.group(1) for m in _PATTERN.finditer(text.lower())]
+    return [m.group(1) for m in _PATTERN.finditer(unicodedata.normalize("NFC", text).lower())]
 
 
 def parse_gold_pronouns(record: dict) -> list[str]:

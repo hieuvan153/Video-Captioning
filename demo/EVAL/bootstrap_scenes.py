@@ -5,6 +5,7 @@ import sacrebleu
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("HF_HOME", "demo/cache/huggingface")
 from EVAL import thesis_score as TS  # noqa: E402
+from EVAL.film_ref_anchored import ci95  # noqa: E402
 
 ap = argparse.ArgumentParser(); ap.add_argument("--eval_dir", required=True); ap.add_argument("--movies", nargs="*")
 ap.add_argument("--a", required=True); ap.add_argument("--b", required=True); ap.add_argument("--n", type=int, default=2000)
@@ -25,5 +26,5 @@ for name, fn in (("BLEU", bleu), ("chrF", chrf)):
     for _ in range(a.n):
         idx = [random.randrange(len(pa)) for _ in pa]
         d = fn([pb[i] for i in idx]) - fn([pa[i] for i in idx]); ds.append(d); wins += d > 0
-    ds.sort()
-    print(f"{name}: {a.b} - {a.a} = {d0:+.2f}  95%CI=[{ds[int(.025*a.n)]:+.2f}, {ds[int(.975*a.n)]:+.2f}]  p(b<=a)={1-wins/a.n:.3f}  n_scenes={len(pa)}")
+    lo, hi = ci95(ds)
+    print(f"{name}: {a.b} - {a.a} = {d0:+.2f}  95%CI=[{lo:+.2f}, {hi:+.2f}]  p(b<=a)={1-wins/a.n:.3f}  n_scenes={len(pa)}")

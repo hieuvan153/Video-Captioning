@@ -18,6 +18,7 @@ import os
 import random
 import re
 import sys
+import unicodedata
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -27,28 +28,54 @@ import srt  # noqa: E402
 
 def load(p: str) -> list[srt.Subtitle]:
     with open(p, encoding="utf-8-sig", errors="replace") as f:
-        return list(srt.parse(f.read()))
+        return list(srt.parse(unicodedata.normalize("NFC", f.read())))
 
 
 def overlap_text(ref: list[srt.Subtitle], other: list[srt.Subtitle],
                  min_ov: float = 0.0) -> list[str]:
-    """Voi moi cue tham chieu, noi text cac cue cua `other` giao thoi gian voi no.
+    """Voi moi cue tham chieu, noi phan chu cua cac cue `other` giao thoi gian voi no.
 
-    min_ov = phan giao TOI THIEU (giay) moi tinh la trung. Mac dinh 0.0 = luat cu, giu nguyen
-    moi con so da cong bo. Nup calibration, khong phai mac dinh moi: do 07/09, o nguong 0 thi
-    chinh BAN THAM CHIEU EN cua NGUOI (phu de chuyen nghiep cung phim) cham voi thuoc VI ra
-    ref/cue = 1,50 - te hon arm may 1,19 - chi vi duoi cue EN tran qua bien VI, 41% truong hop
-    tran duoi 0,2 s. Nang nguong len 0,2 s thi con 0,97, dung bang moc nguoi. Tuc luat "giao
-    mot phan nghin giay cung tinh" thuong cue NGAN va phat do dai cue dung nhip nguoi.
+    Mot cue `other` giao nhieu cue tham chieu thi CHIA tu cua no theo ty le thoi gian giao (theo thu
+    tu thoi gian), khong nhan ban nguyen cau sang moi cue: nhan ban lam arm co cue dai bi phat do
+    chinh xac va duoc mien brevity penalty, nen hai arm khac luoi cue khong so duoc voi nhau.
+
+    min_ov = phan giao TOI THIEU (giay) moi tinh la trung. Do 07/09: o nguong 0, ban EN cua NGUOI
+    cham voi thuoc VI ra ref/cue 1,50 (te hon may 1,19) chi vi duoi cue tran qua bien; 0,2 s thi 0,97.
     """
-    o = [(s.start.total_seconds(), s.end.total_seconds(),
-          re.sub(r"\s+", " ", s.content).strip()) for s in other]
-    out = []
-    for r in ref:
-        lo, hi = r.start.total_seconds(), r.end.total_seconds()
-        hit = [t for (a, b, t) in o if min(b, hi) - max(a, lo) > min_ov and t]
-        out.append(" ".join(hit))
-    return out
+    bounds = [(r.start.total_seconds(), r.end.total_seconds()) for r in ref]
+    parts: list[list[str]] = [[] for _ in ref]
+    for s in other:
+        words = s.content.split()
+        a, b = s.start.total_seconds(), s.end.total_seconds()
+        hits = [(i, min(b, hi) - max(a, lo)) for i, (lo, hi) in enumerate(bounds)]
+        hits = [(i, ov) for i, ov in hits if ov > min_ov]
+        if not words or not hits:
+            continue
+        total, acc, k = sum(ov for _, ov in hits), 0.0, 0
+        for j, (i, ov) in enumerate(hits):
+            acc += ov
+            end = len(words) if j == len(hits) - 1 else int(len(words) * acc / total + 0.5)
+            if end > k:
+                parts[i].append(" ".join(words[k:end]))
+            k = max(k, end)
+    return [" ".join(p) for p in parts]
+
+
+def percentile(sorted_vals: list[float], p: float) -> float:
+    """Phan vi p (0..1) tren danh sach da sap xep, noi suy tuyen tinh nhu numpy.percentile."""
+    m = len(sorted_vals)
+    if m == 1:
+        return sorted_vals[0]
+    pos = (m - 1) * p
+    lo = int(pos)
+    hi = min(lo + 1, m - 1)
+    return sorted_vals[lo] + (sorted_vals[hi] - sorted_vals[lo]) * (pos - lo)
+
+
+def ci95(ds: list[float]) -> tuple[float, float]:
+    """Khoang tin cay 95% percentile bootstrap (truoc day lay ds[int(p*n)], lech mot order statistic)."""
+    s = sorted(ds)
+    return percentile(s, 0.025), percentile(s, 0.975)
 
 
 def selftest() -> None:
@@ -56,23 +83,30 @@ def selftest() -> None:
     C = lambda a, b, t: srt.Subtitle(index=0, start=T(seconds=a), end=T(seconds=b), content=t)
     ref = [C(0, 1, "A"), C(1, 2, "B")]
     hyp = [C(0, 1.05, "x")]                       # tran 0.05s sang cue B
-    assert overlap_text(ref, hyp) == ["x", "x"], "nguong 0: tran mot chut van bi dan hai lan"
+    assert overlap_text(ref, hyp) == ["x", ""], "nguong 0: phan tran nho khong duoc nhan ban cau"
     assert overlap_text(ref, hyp, 0.2) == ["x", ""], "nguong 0.2s: tran nho khong con tinh"
-    assert overlap_text(ref, [C(5, 6, "z")]) == ["", ""]          # roi hoan toan
-    assert overlap_text(ref, [C(0, 2, "y")], 0.2) == ["y", "y"]   # trum that thi van tinh ca hai
+    assert overlap_text(ref, [C(5, 6, "z")]) == ["", ""]              # roi hoan toan
+    assert overlap_text(ref, [C(0, 2, "y z")], 0.2) == ["y", "z"]     # trum hai cue: chia tu, khong nhan ban
     print("selftest OK")
 
 
-def main() -> None:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ref", required=True); ap.add_argument("--src_en", required=True)
-    ap.add_argument("--arms", nargs="+", required=True); ap.add_argument("--base")
+    ap.add_argument("--ref"); ap.add_argument("--src_en")
+    ap.add_argument("--arms", nargs="+"); ap.add_argument("--base")
     ap.add_argument("--no_comet", action="store_true"); ap.add_argument("--n", type=int, default=1000)
     ap.add_argument("--report")
-    ap.add_argument("--min_overlap_s", type=float, default=0.0,
-                    help="phan giao toi thieu moi tinh la trung cue (0.0 = luat cu)")
+    ap.add_argument("--min_overlap_s", type=float, default=0.2,
+                    help="phan giao toi thieu (giay) moi tinh la trung cue; 0.2 = giao thuc cong G2")
     ap.add_argument("--selftest", action="store_true")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
+    if not a.selftest and not (a.ref and a.src_en and a.arms):
+        ap.error("can --ref, --src_en va --arms (tru khi --selftest)")
+    return a
+
+
+def main() -> None:
+    a = parse_args()
     if a.selftest:
         return selftest()
 
@@ -120,15 +154,15 @@ def main() -> None:
                     idx = [random.randrange(len(r)) for _ in r]
                     ds.append(fn([hn[i] for i in idx], [[r[i] for i in idx]]).score
                               - fn([hb[i] for i in idx], [[r[i] for i in idx]]).score)
-                ds.sort()
-                cmp.setdefault(name, {})[mname] = [round(d0, 4), round(ds[int(.025*a.n)], 4), round(ds[int(.975*a.n)], 4)]
-                print(f"  {mname}: {name} - {base} = {d0:+.2f}  95%CI=[{ds[int(.025*a.n)]:+.2f}, {ds[int(.975*a.n)]:+.2f}]", flush=True)
+                lo, hi = ci95(ds)
+                cmp.setdefault(name, {})[mname] = [round(d0, 4), round(lo, 4), round(hi, 4)]
+                print(f"  {mname}: {name} - {base} = {d0:+.2f}  95%CI=[{lo:+.2f}, {hi:+.2f}]", flush=True)
             if name in seg and base in seg:
                 d = [x - y for x, y in zip(seg[name], seg[base])]
-                random.seed(0); ds = sorted(sum(random.choice(d) for _ in d) / len(d) for _ in range(a.n))
-                cmp.setdefault(name, {})["COMET-DA"] = [round(sum(d)/len(d), 6), round(ds[int(.025*a.n)], 6), round(ds[int(.975*a.n)], 6)]
+                random.seed(0); lo, hi = ci95([sum(random.choice(d) for _ in d) / len(d) for _ in range(a.n)])
+                cmp.setdefault(name, {})["COMET-DA"] = [round(sum(d)/len(d), 6), round(lo, 6), round(hi, 6)]
                 print(f"  COMET-DA: {name} - {base} = {sum(d)/len(d):+.4f}"
-                      f"  95%CI=[{ds[int(.025*a.n)]:+.4f}, {ds[int(.975*a.n)]:+.4f}]", flush=True)
+                      f"  95%CI=[{lo:+.4f}, {hi:+.4f}]", flush=True)
 
     if a.report:
         with open(a.report, "w", encoding="utf-8") as f:

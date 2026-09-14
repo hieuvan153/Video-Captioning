@@ -31,13 +31,11 @@ def test_cue_prf_dem_boi():
     assert rows == [(2, 1, 1)]   # chung: 1 anh + 1 em = 2; thua 1 em; thieu 1 anh
 
 
-def test_overlap_text_replication():
-    """Khoá bản phát hiện: overlap_text nhan ban text cua cue arm dai sang nhieu cue tham chieu.
+def test_overlap_text_no_replication():
+    """overlap_text CHIA tu cua cue arm dai theo thoi gian giao (truoc 14/09 nhan ban sang moi cue ref).
 
-    ref = [(0-2s,"Anh à?"), (5-7s,"Em ơi"), (8-10s,"Đi")]
-    arm = [(0-10s,"Anh yêu em")]
-    -> hyp = ["Anh yêu em", "Anh yêu em", "Anh yêu em"] (nhan ban cho moi cue ref)
-    -> cue_prf -> [(1,1,0), (1,1,0), (0,2,0)] (moi cue duoc danh gia rieng, tp va fp lap)
+    ref = [(0-2s,"Anh à?"), (5-7s,"Em ơi"), (8-10s,"Đi")], arm = [(0-10s,"Anh yêu em")]
+    -> hyp = ["Anh", "yêu", "em"] -> cue_prf -> [(1,0,0), (0,0,1), (0,1,0)]
     """
     # Tao ref cues
     ref_subs = [
@@ -53,9 +51,8 @@ def test_overlap_text_replication():
     hyp_texts = overlap_text(ref_subs, arm_subs)
     ref_texts = ["Anh à?", "Em ơi", "Đi"]
 
-    rows = cue_prf(ref_texts, hyp_texts)
-    # Du "Anh yêu em" co chat luong tuyet voi, nhung bi nhan ban -> tp va fp deu lap
-    assert rows == [(1, 1, 0), (1, 1, 0), (0, 2, 0)]
+    assert hyp_texts == ["Anh", "yêu", "em"], hyp_texts
+    assert cue_prf(ref_texts, hyp_texts) == [(1, 0, 0), (0, 0, 1), (0, 1, 0)]
 
 
 from EVAL.pron_anchored import assign_scene_ids, bootstrap, bootstrap_cluster
@@ -218,7 +215,7 @@ def test_replace_rel_malformed_no_numbered_sections():
 if __name__ == "__main__":
     test_cue_prf_dat_dung_cho_moi_tinh_diem()
     test_cue_prf_dem_boi()
-    test_overlap_text_replication()
+    test_overlap_text_no_replication()
     test_replace_rel_giu_nguyen_schema()
     test_replace_rel_them_moi_khi_thieu_muc_3()
     test_oracle_line()

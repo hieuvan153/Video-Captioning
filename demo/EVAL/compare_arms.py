@@ -23,9 +23,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from EVAL.pronoun_f1 import corpus_pronoun_f1, line_counts
+from EVAL.pronoun_f1 import line_counts
 from EVAL.pronoun_lexicon import extract_pronouns
 from EVAL.run_eval import align_by_time, evaluate_lines, load_srt
+from EVAL.film_ref_anchored import ci95
 
 
 def _f1(tp: int, fp: int, fn: int) -> float:
@@ -62,9 +63,7 @@ def paired_bootstrap(
         a = [sum(stats_a[i][k] for i in idx) for k in range(3)]
         b = [sum(stats_b[i][k] for i in idx) for k in range(3)]
         deltas.append(_f1(*b) - _f1(*a))
-    deltas.sort()
-    lo = deltas[int(0.025 * n_resamples)]
-    hi = deltas[min(int(0.975 * n_resamples), n_resamples - 1)]
+    lo, hi = ci95(deltas)
     if observed >= 0:
         p = sum(1 for d in deltas if d <= 0) / n_resamples
     else:
@@ -92,7 +91,8 @@ def _gold_for(movie_dir: str, refs: list[str]) -> list[list[str]]:
 
 def _aligned_hyps(hyp_path: str, ref_subs: list) -> list[str]:
     hyp_subs = load_srt(hyp_path)
-    if len(hyp_subs) == len(ref_subs):
+    # Chi ghep theo chi so khi CUNG luoi cue; cung so cue ma lech moc thi phai gioi theo thoi gian.
+    if [(h.start, h.end) for h in hyp_subs] == [(r.start, r.end) for r in ref_subs]:
         return [h.content for h in hyp_subs]
     return [h for h, _ in align_by_time(hyp_subs, ref_subs)]
 

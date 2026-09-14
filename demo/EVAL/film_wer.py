@@ -1,6 +1,9 @@
-"""WER cua ASR cho MOT phim le, dung dung chuan hoa cua docs/eval/audit_2026-09-02/asr_wer_e5.py
-(bo nhan NGUOI NOI:, (am thanh), [..], the <i>, ky hieu nhac, lowercase, bo dau cau) de con so
-so truc tiep duoc voi bang WER cua tap E5.
+"""WER cua ASR cho MOT phim le.
+
+Chuan hoa: bo phan SDH (nhan NGUOI NOI:, (am thanh), [..], the <i>, ky hieu nhac) roi dua qua
+EnglishTextNormalizer cua Whisper (so "twenty" = "20", tach viet tat, dau nhay cong, chinh ta My/Anh).
+Truoc 14/09 chi lowercase + bo dau cau nen "20" va "twenty" bi tinh la loi thay the; so WER cu
+(16,73 tren Ode to Joy) dung chuan hoa cu, KHONG so truc tiep voi so moi.
 
 CLI: van_env/bin/python demo/EVAL/film_wer.py --hyp asr.srt --ref en_chuan.srt --name Ten_Phim
 """
@@ -11,12 +14,16 @@ import re
 
 import jiwer
 import srt
+from whisper.normalizers import EnglishTextNormalizer
+
+_EN = EnglishTextNormalizer()
 
 
-def norm(t: str) -> str:      # giong het norm() trong asr_wer_e5.py
+def norm(t: str) -> str:
     t = re.sub(r'<[^>]+>', '', t); t = re.sub(r'\([^)]*\)', '', t); t = re.sub(r'\[[^\]]*\]', '', t)
-    t = re.sub(r'\b[A-Z][A-Z .\']{1,30}:', '', t); t = t.replace('♪', '').lower()
-    t = re.sub(r"[^a-z0-9' ]+", ' ', t); return re.sub(r'\s+', ' ', t).strip()
+    t = re.sub(r'\b[A-Z][A-Z .\']{1,30}:', '', t); t = t.replace('♪', '')
+    t = t.replace('\u2019', "'").replace('\u2018', "'")   # normalizer cua Whisper khong doi nhay cong
+    return re.sub(r'\s+', ' ', _EN(t)).strip()
 
 
 def text(path: str) -> str:

@@ -18,10 +18,10 @@ import os
 import sys
 import unicodedata
 
-sys.path.insert(0, "/data/ndloc_bk/ntVan/ASR")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import sacrebleu  # noqa: E402
-from calculate_bleu import (  # noqa: E402
+from EVAL.bleu47 import (  # noqa: E402
     clean_custom,
     clean_no_punc,
     get_optimized_reference_text,

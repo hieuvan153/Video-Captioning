@@ -1,6 +1,6 @@
 """pron_anchored.py nhung CHI cham tren mot tap con cac cue nguon duoc giu lai
 (vd tap chunk CHUNG giua nhieu arm co fallback khac nhau — xem
-demo/EVAL/rebuild_guarded_srt.py va docs/eval/2026-09-06-tran-scene-context.md
+demo/EVAL/rebuild_guarded_srt.py (nay chi con tren nhanh research/base) va docs/eval/2026-09-06-tran-scene-context.md
 muc "Guard cap chunk").
 
 Vi sao can rieng file nay: khi cac arm fallback o cac chunk KHAC nhau, cham

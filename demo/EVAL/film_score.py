@@ -1,6 +1,6 @@
 """Cham mot phim le (khong co scene GT) cho nhieu arm SRT.
 
-- BLEU: dung giao thuc Bang 4.7 (calculate_bleu.py cua anh ntVan): noi toan bo
+- BLEU: dung giao thuc Bang 4.7 (EVAL/bleu47.py, chep tu calculate_bleu.py cua anh ntVan): noi toan bo
   dong hyp thanh 1 chuoi, reference toi uu hoan vi dong trung timestamp,
   corpus BLEU tren 1 "tap". Cot raw / nopunc / custom nhu bleu_episode.py.
 - Pronoun F1: multiset tren TOAN PHIM voi lexicon cua thesis_score.py.
@@ -22,13 +22,13 @@ import os
 import re
 import sys
 import tempfile
+import unicodedata
 
-sys.path.insert(0, "/data/ndloc_bk/ntVan/ASR")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import sacrebleu  # noqa: E402
 import srt  # noqa: E402
-from calculate_bleu import (  # noqa: E402
+from EVAL.bleu47 import (  # noqa: E402
     clean_custom, clean_no_punc, get_optimized_reference_text,
     get_subs_from_srt, get_text_from_srt,
 )
@@ -42,7 +42,7 @@ AD = re.compile(r"opensubtitles|advertise|subtitlecat|www\.", re.I)
 
 def load(path: str) -> list[srt.Subtitle]:
     with open(path, encoding="utf-8", errors="replace") as f:
-        return list(srt.parse(f.read()))
+        return list(srt.parse(unicodedata.normalize("NFC", f.read())))
 
 
 def clean_ref(path: str) -> str:
@@ -102,7 +102,7 @@ def score(ref_path: str, en_path: str, arms: dict[str, str], use_comet: bool,
         comet_model = load_from_checkpoint(download_model("Unbabel/wmt20-comet-qe-da"))
     if use_comet_da:   # COMET co tham chieu: ref = cue tham chieu giao thoi gian voi cue cua ta
         da_model = load_from_checkpoint(download_model("Unbabel/wmt22-comet-da"))
-        ref_lines = gold_src_lines(en_path, ref_path, 1.0, 0.0)
+        ref_lines = gold_src_lines(en_path, ref_clean, 1.0, 0.0)   # ref da bo the/[am thanh]/quang cao, nhu BLEU
     rep = {}
     for arm, hp in arms.items():
         hyp_raw = get_text_from_srt(hp)
