@@ -173,3 +173,26 @@ def write_srt(subs, path):
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(srt.compose(subs, reindex=False))
+
+
+# Noi dung giu nguyen tu ban cu cua refine_llm (dong "mood of the scene." khong co dau cach cuoi, khac du lieu v3 mot dau
+# cach; do NLL cho thay dau cach khong dang ke). THUT LE thi co: adapter duoc train voi prompt da qua clean_prompt.
+BASE_SYSTEM = 'You are a professional Vietnamese subtitle editor for a movie.\n    Given three sections:\n        <Scene Context> — A description of the characters, their relationships (e.g., lovers, enemies, boss/employee), and the mood of the scene.\n        <English Dialogue> — original English lines.\n        <Rough Vietnamese Translation> — rough Vietnamese translation with possible tone or pronoun issues.\n    Use the English dialogue only to understand speaker context.\n    Fix the Vietnamese translation so that pronouns, tone, and formality are natural and consistent with the context.\n    Keep meaning and structure unchanged.\n    Output only the corrected Vietnamese translation, line by line.   '
+
+
+def clean_prompt(prompt):
+    """Bo thut le dau dong va dong trong o hai dau, giong cong thuc train (ALMA/finetune_gemma_v6.py)."""
+    lines = [line.lstrip() for line in prompt.splitlines()]
+    while lines and lines[0] == "":
+        lines.pop(0)
+    while lines and lines[-1] == "":
+        lines.pop()
+    return "\n".join(lines)
+
+
+def build_system_prompt(caption, system_prompt=None):
+    """--system_prompt (adapter train khong co kenh caption): dung nguyen chuoi. Mac dinh: BASE_SYSTEM + <Scene Context>,
+    qua clean_prompt nhu luc train (NLL cau tra loi vang 1,0394 -> 1,0189)."""
+    if system_prompt:
+        return system_prompt
+    return clean_prompt(f"{BASE_SYSTEM}\n<Scene Context>\n{caption}\n</Scene Context>")

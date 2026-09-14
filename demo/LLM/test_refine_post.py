@@ -93,6 +93,18 @@ def test_write_srt_keeps_every_cue():
     assert len(list(srt.parse(open(p, encoding="utf-8").read()))) == 2
 
 
+def test_system_prompt_matches_training_format():
+    """Adapter mac dinh duoc train voi prompt da bo thut le (clean_prompt): NLL cau tra loi vang 1,0189 so voi
+    1,0394 khi giu thut le nhu refine_llm dang lam (60 mau v3, 14/09)."""
+    from refine_post import build_system_prompt
+    sp = build_system_prompt("Hai nguoi dang cai nhau.")
+    lines = sp.splitlines()
+    assert lines[0].startswith("You are a professional Vietnamese subtitle editor")
+    assert all(line == line.lstrip() for line in lines), [line for line in lines if line != line.lstrip()][:2]
+    assert "<Scene Context>\nHai nguoi dang cai nhau.\n</Scene Context>" in sp
+    assert build_system_prompt("x", system_prompt="Rewrite to natural Vietnamese subtitle.") == "Rewrite to natural Vietnamese subtitle."
+
+
 if __name__ == "__main__":
     fails = 0
     for name, fn in sorted(globals().items()):

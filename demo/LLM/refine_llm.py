@@ -21,7 +21,7 @@ from unsloth import FastLanguageModel  # phai import truoc transformers
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from refine_post import (  # noqa: E402
     align_lines, assign_scenes, cap_chunks, chunk_by_gap, drop_truncated_tail, is_degenerate,
-    lock_len, strip_numbering, write_srt,
+    build_system_prompt, lock_len, strip_numbering, write_srt,
 )
 
 
@@ -154,27 +154,12 @@ def refine_subtitles(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    base_system = (
-        "You are a professional Vietnamese subtitle editor for a movie.\n"
-        "    Given three sections:\n"
-        "        <Scene Context> — A description of the characters, their relationships "
-        "(e.g., lovers, enemies, boss/employee), and the mood of the scene.\n"
-        "        <English Dialogue> — original English lines.\n"
-        "        <Rough Vietnamese Translation> — rough Vietnamese translation with possible "
-        "tone or pronoun issues.\n"
-        "    Use the English dialogue only to understand speaker context.\n"
-        "    Fix the Vietnamese translation so that pronouns, tone, and formality are natural "
-        "and consistent with the context.\n"
-        "    Keep meaning and structure unchanged.\n"
-        "    Output only the corrected Vietnamese translation, line by line.   "
-    )
 
     print("Tokenizing all prompts...")
     all_input_ids = []
     for item in prompts:
         # --system_prompt (adapter v7+ train khong co kenh caption): dung nguyen chuoi, bo <Scene Context>.
-        full_sys = system_prompt or (f"{base_system}\n"
-                    f"    <Scene Context>\n    {item['context']}\n    </Scene Context>")
+        full_sys = build_system_prompt(item["context"], system_prompt)
         user_msg = (f"<English Dialogue>\n{item['raw_en']}\n</English Dialogue>\n"
                     f"<Rough Vietnamese Translation>\n{item['vinai_sub']}\n"
                     f"</Rough Vietnamese Translation>")
