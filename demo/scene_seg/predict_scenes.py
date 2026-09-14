@@ -5,6 +5,7 @@ import json
 import subprocess
 import argparse
 import shutil
+import tempfile
 from fractions import Fraction
 from types import SimpleNamespace
 import numpy as np
@@ -35,7 +36,8 @@ def setup_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
-    cudnn.benchmark = True
+    cudnn.benchmark = False  # benchmark=True chon thuat toan conv khac nhau giua cac lan chay
+    cudnn.deterministic = True
 
 def load_checkpoint(model, ckpt_path):
     checkpoint = torch.load(ckpt_path, map_location='cuda')
@@ -185,15 +187,15 @@ def cut_scenes_ffmpeg(video_path, boundaries, shots, fps, output_dir):
         ]
         subprocess.run(cmd, check=True)
 
-def main():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Demo SCRL Video Scene Segmentation & Cutting")
     parser.add_argument("--video_path", type=str, required=True, help="Path to input video file")
     parser.add_argument("--output_json", type=str, default="output/result.json", help="Path to save output scene timestamps JSON")
     parser.add_argument("--gpu_id", type=str, default="0", help="CUDA GPU ID")
-    parser.add_argument("--temp_dir", type=str, default="./temp_predict_demo", help="Temporary directory for runtime artifacts")
+    parser.add_argument("--temp_dir", type=str, default=None, help="Temporary directory (mac dinh: thu muc tam rieng moi lan chay)")
     parser.add_argument("--keep_temp", action="store_true", help="Keep temporary directory after processing")
     
-    parser.add_argument("--cut_scenes", type=bool, default=True, help="Automatically cut the video into scene .mp4 files")
+    parser.add_argument("--no_cut_scenes", action="store_true", help="Khong cat video thanh cac file .mp4 theo canh")
     parser.add_argument("--output_scenes_dir", type=str, default=None, 
                         help="Folder to save the cut mp4 scenes (default: output_json_basename_scenes)")
     
@@ -208,8 +210,13 @@ def main():
     parser.add_argument("--max_scene_shots", type=int, default=40, help="Maximum number of shots in a scene before splitting")
     parser.add_argument("--split_prob_thresh", type=float, default=0.02, help="Probability threshold for splitting long scenes")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    args.cut_scenes = not args.no_cut_scenes
+    return args
 
+
+def main():
+    args = parse_args()
     if not os.path.exists(args.video_path):
         print(f"Error: Video file not found: {args.video_path}")
         sys.exit(1)
@@ -234,7 +241,7 @@ def run_scene_segmentation(
     video_path,
     output_json,
     gpu_id="0",
-    temp_dir="./temp_predict_demo",
+    temp_dir=None,
     keep_temp=False,
     cut_scenes=True,
     output_scenes_dir=None,
@@ -249,13 +256,12 @@ def run_scene_segmentation(
     if bilstm_checkpoint is None:
         bilstm_checkpoint = os.path.join(ROOT_DIR, "model/scene_seg/model_best.pth.tar")
 
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     setup_seed(100)
 
     video_abs_path = os.path.abspath(video_path)
     video_name = os.path.splitext(os.path.basename(video_path))[0]
-    temp_dir = os.path.abspath(temp_dir)
+    # Thu muc tam rieng: ./temp_predict_demo dung chung bi rmtree cuoi moi lan chay -> hai lan chay dam nhau.
+    temp_dir = tempfile.mkdtemp(prefix="scene_seg_") if temp_dir is None else os.path.abspath(temp_dir)
     os.makedirs(temp_dir, exist_ok=True)
 
     output_json_abs = os.path.abspath(output_json)

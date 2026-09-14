@@ -55,14 +55,27 @@ def free_gpu_memory():
     print("--- GPU Memory Cleared ---", flush=True)
 
 
+def english_audio_index(streams):
+    """Chi so (trong cac luong AUDIO) cua luong tieng Anh theo nhan language/title; khong co nhan thi luong dau.
+    ffmpeg mac dinh chon luong audio "tot nhat", phim co luong long tieng dung truoc se vao sai ngon ngu."""
+    audio = [s for s in streams if s.get("codec_type") == "audio"]
+    for k, s in enumerate(audio):
+        tags = {key.lower(): str(v).lower() for key, v in (s.get("tags") or {}).items()}
+        if tags.get("language") in ("en", "eng", "english") or "english" in tags.get("title", ""):
+            return k
+    return 0
+
+
 def step1_extract_audio(video_path, audio_path):
     print("\n=== STEP 1: Extracting Audio ===", flush=True)
     if os.path.exists(audio_path):
         print(f"Audio file already exists: {audio_path}. Skipping extraction.", flush=True)
         return
-    print(f"Extracting audio to {audio_path}...", flush=True)
+    k = english_audio_index(ffmpeg.probe(video_path)["streams"])
+    print(f"Extracting audio stream 0:a:{k} to {audio_path}...", flush=True)
     ffmpeg.input(video_path).output(
         audio_path,
+        map=f"0:a:{k}",
         ar="16000",
         ac="1",
         acodec="pcm_s16le",

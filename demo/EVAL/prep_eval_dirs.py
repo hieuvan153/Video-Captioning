@@ -17,7 +17,6 @@ CLI:
 from __future__ import annotations
 
 import argparse
-import datetime
 import glob
 import json
 import os
@@ -77,9 +76,8 @@ def _pronouns(rec: dict) -> list[str]:
 
 def _srt_block(i: int, start: float, end: float, text: str) -> str:
     def ts(sec: float) -> str:
-        td = datetime.timedelta(seconds=max(0.0, sec))
-        total = int(td.total_seconds())
-        ms = int(round((td.total_seconds() - total) * 1000))
+        total_ms = int(round(max(0.0, sec) * 1000))   # lam tron TONG ms: phan le >= 0,9995 s khong con ra ",1000"
+        total, ms = divmod(total_ms, 1000)
         return f"{total // 3600:02d}:{total % 3600 // 60:02d}:{total % 60:02d},{ms:03d}"
     return f"{i}\n{ts(start)} --> {ts(end)}\n{text.strip()}\n"
 

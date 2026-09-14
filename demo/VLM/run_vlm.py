@@ -169,7 +169,7 @@ def run_vlm_captioning(
     device="cuda:0",
     min_duration=3.0,
     max_frames=240,
-    fps=0.5,
+    fps=1.0,
     scenes_json_path=None
 ):
     if cache_dir is None:
@@ -223,25 +223,22 @@ def run_vlm_captioning(
 
     print(f"Đang tải mô hình {model_path} lên {device}...")
     t_load_start = time.time()
-    try:
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path,
-            trust_remote_code=True,
-            device_map={"": device},
-            torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
-            cache_dir=cache_dir
-        )
-        processor = AutoProcessor.from_pretrained(
-            model_path,
-            trust_remote_code=True,
-            cache_dir=cache_dir
-        )
-        t_load_end = time.time()
-        print(f"Tải mô hình thành công! Thời gian load: {t_load_end - t_load_start:.4f}s")
-    except Exception as e:
-        print(f"Lỗi khi tải mô hình: {e}")
-        return
+    # Nap loi thi de loi noi ra: truoc day chi in roi return, pipeline chay tiep khi thieu file caption.
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+        device_map={"": device},
+        torch_dtype=torch.bfloat16,
+        attn_implementation="flash_attention_2",
+        cache_dir=cache_dir
+    )
+    processor = AutoProcessor.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+        cache_dir=cache_dir
+    )
+    t_load_end = time.time()
+    print(f"Tải mô hình thành công! Thời gian load: {t_load_end - t_load_start:.4f}s")
 
     results = []
 
@@ -263,6 +260,7 @@ def run_vlm_captioning(
         duration_sec = frame_count / fps_video
         cap.release()
         
+        error = None
         if duration_sec < min_duration:
             print(f"  -> Bỏ qua scene do thời lượng ngắn ({duration_sec:.2f}s < {min_duration}s)")
             caption_text = ""
@@ -312,9 +310,10 @@ Constraints: Use visual evidence only. Ignore background crowds. Strictly limit 
                 print(f"     + Sinh text (model.generate): {t_gen_end - t_gen_start:.4f}s")
                 print(f"     + Tổng thời gian infer scene: {t_infer_end - t_infer_start:.4f}s")
             except Exception as e:
-                # Luu y: chuoi loi thanh caption va di vao prompt cua Gemma (Ode to Joy: 0/114 canh).
+                # Caption rong (tang LLM dung "None"); loi ghi rieng, khong lan vao prompt Gemma.
                 print(f"  -> Lỗi khi phân tích video: {e}")
-                caption_text = f"Error during analysis: {e}"
+                caption_text = ""
+                error = str(e)
             finally:
                 free_gpu_memory(device)
 
@@ -329,6 +328,8 @@ Constraints: Use visual evidence only. Ignore background crowds. Strictly limit 
             "end_time": meta_info.get("end_time", None),
             "caption": caption_text
         }
+        if error:
+            scene_result["error"] = error
         
         results.append(scene_result)
         

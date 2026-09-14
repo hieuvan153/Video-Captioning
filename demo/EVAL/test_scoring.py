@@ -119,6 +119,13 @@ def test_thesis_score_scene_matching_has_no_missing_import():
     assert thesis_score.find_best_scene(20.0, scenes) == -1
 
 
+def test_prep_eval_srt_timestamp_never_writes_1000_ms():
+    """ms = round(phan le * 1000) ra 1000 khi phan le >= 0,9995 s -> '00:00:01,1000'."""
+    from EVAL.prep_eval_dirs import _srt_block
+    assert "00:00:02,000 --> 00:00:02,500" in _srt_block(1, 1.9996, 2.5, "x"), _srt_block(1, 1.9996, 2.5, "x")
+    assert "01:00:00,000" in _srt_block(1, 3599.9999, 3600.2, "x")
+
+
 if __name__ == "__main__":
     fails = 0
     for name, fn in sorted(globals().items()):
