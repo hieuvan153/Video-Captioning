@@ -45,8 +45,10 @@ transcribe_options = {
     "initial_prompt": "",  # "" khac None: cua so dau moi chunk nhan prompt " "
     "word_timestamps": True,
     "clip_timestamps": "0",
-    # Tu cuoi nam trong 2 s cuoi cua so thi whisper nhay tron 30 s, bo cau dang do -> mat tu o duong noi.
-    "hallucination_silence_threshold": 2.0,
+    # None (14/09, Ode to Joy, cung dieu kien, chay lap giong het tung byte): voi 2.0 whisper nhay tron 30 s khi
+    # tu cuoi nam trong 2 s cuoi cua so va bo cau dang do. WER 16,61 -> 15,92, tu mat o duong noi 226 -> 156,
+    # Bang 4.7 36,04 -> 36,30 BLEU. (Da thu va BO: alignment_heads cua medium.en WER +0,26; initial_prompt=None +0,31.)
+    "hallucination_silence_threshold": None,
 }
 
 def run(audio_path, out_dir = None, out_name = None):
