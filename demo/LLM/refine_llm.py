@@ -7,26 +7,18 @@ import argparse
 import srt
 import torch
 
-# Disable torch.compile (Dynamo) to prevent compilation overhead for dynamic sequence lengths.
+# Tat torch.compile: do dai chuoi thay doi lien tuc, bien dich chi ton thoi gian.
 torch._dynamo.config.disable = True
 
-from torch.nn.utils.rnn import pad_sequence
-from tqdm import tqdm
-
-# Dynamic root folder calculation (corresponds to the demo folder)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Login to Hugging Face
 from huggingface_hub import login
 login(token=os.environ["HF_TOKEN"], add_to_git_credential=False)
 
-from unsloth import FastLanguageModel
+from unsloth import FastLanguageModel  # phai import truoc transformers
 
-
-
-# Mot cap chi duoc gan khi giong hon nguong nay; duoi nguong thi BO dong LLM va
-# giu ban tho. Khong co san thi ratio = 0 van thang "bo qua" (cong 0 = cong 0) nen
-# QHD gan bua dong lac vao cue bat ky. Quet 09/09 chon 0.20.
+# Diem cua mot cap (dong LLM, cue) = ty le giong - nguong; cap duoi nguong khong duoc gan
+# (khong co nguong thi QHD gan bua dong lac vao cue bat ky). Quet 09/09 chon 0.20.
 ALIGN_MIN_RATIO = 0.20
 
 
@@ -71,20 +63,12 @@ def align_lines(rough, out_lines, tau=ALIGN_MIN_RATIO):
     return res
 
 
-# ── Khoa do dai + ghep dai tu ────────────────────────────────────────────────
-# Do 09/09-10/09: tang LLM nang do chinh xac n-gram (BLEU neu BP=1: 38,68 -> 40,66)
-# nhung viet NGAN lai (BP 0,9309 -> 0,9055) nen chi lai +0,82 BLEU. Nguoi dich
-# ben thu 3 viet dai hon: vi/en 1,196 so voi 1,105 cua pipeline.
-# Khoa do dai: dong tinh chinh ngan hon LEN_LOCK_RATIO x ban tho thi KHONG lay ca
-# dong, chi chuyen phan sua DAI TU (xung ho) sang ban tho. Giu do dai + n-gram cua
-# ban tho (loi BLEU) ma van giu duoc phan xung ho cua LLM (loi PronF1).
-# Bang 4.7 tren Ode to Joy 2019: 36,82 -> 37,90 BLEU, PronF1 0,833 -> 0,830.
-# Vung 0,88-0,95 deu cho 37,79-37,90 nen nguong khong nhay.
+# Khoa do dai: dong tinh chinh ngan hon LEN_LOCK_RATIO x ban tho (tinh theo so tu) thi chi
+# chuyen phan sua DAI TU sang ban tho. LLM viet ngan lai lam mat BLEU (BP); khoa nay dua
+# Bang 4.7 Ode to Joy tu 36,82 len 37,90 BLEU, PronF1 0,833 -> 0,830 (nguong 0,88-0,95 deu tuong duong).
 LEN_LOCK_RATIO = 0.90
 
-# Dai tu / tu xung ho tieng Viet o muc TU. Rong hon VI_PRONOUNS cua thuoc do
-# (them con/chau/chu/bac/di/mo/thim/ngai/nang/chang) de bo chon khong bam dinh
-# vao tu vung cua chinh thuoc PronF1.
+# Dai tu / tu xung ho o muc TU, rong hon tu vung cua thuoc PronF1 de khong bam dinh thuoc do.
 _PRON_TOK = set("anh chi em ong ba co cau may tao toi minh ta ban han no y ho ay "
                 "chung tui con chau chu bac di mo thim ngai nang chang".split()
                 + "anh ch\u1ecb em \u00f4ng b\u00e0 c\u00f4 c\u1eadu m\u00e0y tao t\u00f4i m\u00ecnh ta b\u1ea1n h\u1eafn n\u00f3 y h\u1ecd \u1ea5y "
@@ -151,8 +135,7 @@ def parse_args():
     parser.add_argument("--en_srt",   type=str, required=True)
     parser.add_argument("--vinai_srt",type=str, required=True)
     parser.add_argument("--vlm_json", type=str, default=None,
-                        help="Caption cua VLM. Bo trong (hoac 'none') thi chia chunk theo "
-                             "khoang lang — kien truc v2 khong chay VLM.")
+                        help="Caption cua VLM. Bo trong (hoac 'none') thi chia chunk theo khoang lang.")
     parser.add_argument("--chunk_gap_s", type=float, default=2.0,
                         help="Cat chunk khi khoang lang giua hai cue vuot nguong nay (giay).")
     parser.add_argument("--chunk_target", type=int, default=20,
@@ -172,19 +155,10 @@ def parse_args():
 
 
 def chunk_by_gap(subs, gap_s=2.0, target=20):
-    """Chia cue thanh chunk MA KHONG CAN VLM: cat o khoang lang > gap_s roi gop
-    cac manh lien tiep cho toi khi dat co target cue.
-
-    Kien truc v2 da bo tang scene_seg + VLM (tiet kiem ~104 phut), nhung
-    refine_llm.py von lay RANH GIOI chunk tu file caption cua VLM. Tran cua NOI DUNG
-    caption da do (+0,0117 PronF1, truot cong) — cai con thieu chi la cho cat.
-    Khoang lang trong thoai la cho cat re va co san.
-
-    Tra ve cung cau truc voi nhanh VLM (caption = "None") de phan sau dung chung.
-
-    Mac dinh gap=2,0s target=20 chon vi bam sat co chunk THAT cua VLM tren Ode to
-    Joy: VLM 95 chunk / trung vi 15 / tb 20,4 — gap2,0 cho 104 / 17 / 18,6.
-    """
+    """Chia cue thanh chunk khong can VLM: cat o khoang lang > gap_s, gop manh lien tiep toi target cue.
+    Cung cau truc voi nhanh VLM (caption = "None"). gap 2,0 s / target 20 cho co chunk sat VLM
+    tren Ode to Joy (104 chunk, trung vi 17 so voi 95 / 15). Luu y: mot doan khong co khoang
+    lang nao van thanh MOT chunk dai hon target."""
     if not subs:
         return []
     cuts = [0]
@@ -230,8 +204,7 @@ def refine_subtitles(
 ):
     if cache_dir is None:
         cache_dir = os.path.join(ROOT_DIR, "cache")
-    # ── Read inputs ──────────────────────────────────────────────────────────
-    print("📖 Reading subtitle files...")
+    print("Reading subtitle files...")
     with open(en_srt_path,    "r", encoding="utf-8") as f:
         en_subs   = list(srt.parse(f.read()))
     with open(vinai_srt_path, "r", encoding="utf-8") as f:
@@ -249,13 +222,11 @@ def refine_subtitles(
                 for s in en_subs]
 
     if not vlm_json_path or vlm_json_path.lower() == "none":
-        # Kien truc v2 khong chay VLM -> khong co ranh gioi scene. Cat theo khoang
-        # lang, cho ra chunk co co tuong duong (xem chunk_by_gap).
-        print(f"📂 Khong co VLM caption -> chia chunk theo khoang lang "
+        print(f"Khong co VLM caption -> chia chunk theo khoang lang "
               f"(gap>{chunk_gap_s}s, gop toi {chunk_target} cue).", flush=True)
         scenes_data = chunk_by_gap(en_subs, chunk_gap_s, chunk_target)
     else:
-        print(f"📖 Reading scene captions: {vlm_json_path}")
+        print(f"Reading scene captions: {vlm_json_path}")
         with open(vlm_json_path, "r", encoding="utf-8") as f:
             vlm_scenes = json.load(f)
 
@@ -268,15 +239,13 @@ def refine_subtitles(
                 "indices":    []
             })
 
-        # ── Assign subtitles → scenes ────────────────────────────────────────
         for i, sub in enumerate(en_subs):
             mid = (sub.start.total_seconds() + sub.end.total_seconds()) / 2.0
             si  = find_best_scene(mid, scenes_data)
             if si != -1:
                 scenes_data[si]["indices"].append(i)
 
-    # ── Build prompt list ────────────────────────────────────────────────────
-    prompts = []   # list of {"indices", "context", "raw_en", "vinai_sub"}
+    prompts = []
     for sc in scenes_data:
         if not sc["indices"]:
             continue
@@ -288,9 +257,8 @@ def refine_subtitles(
             "raw_en":    "\n".join(en_subs[j].content    for j in chunk),
             "vinai_sub": "\n".join(vinai_subs[j].content for j in chunk),
         })
-    print(f"✓ {len(prompts)} scene-prompt chunks to process.")
+    print(f"{len(prompts)} scene-prompt chunks to process.")
 
-    # ── Load model ────────────────────────────────────────────────────────────
     print(f"Loading model via Unsloth 4-bit: {adapter_model_name}...")
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=adapter_model_name,
@@ -320,14 +288,10 @@ def refine_subtitles(
         "    Output only the corrected Vietnamese translation, line by line.   "
     )
 
-    # ── Pre-tokenize all prompts ─────────────────────────────────────────────
     print("Tokenizing all prompts...")
     all_input_ids = []
     for item in prompts:
-        # v7 tro di huan luyen KHONG co khoi <Scene Context> (kien truc v2 da cat
-        # tang VLM). Dua --system_prompt vao thi dung y nguyen chuoi do lam system va
-        # BO khoi Scene Context, khop dung dinh dang luc train. Cach chia chunk theo
-        # scene van giu nguyen nen so sanh giua cac adapter la cong bang.
+        # --system_prompt (adapter v7+ train khong co kenh caption): dung nguyen chuoi, bo <Scene Context>.
         full_sys = system_prompt or (f"{base_system}\n"
                     f"    <Scene Context>\n    {item['context']}\n    </Scene Context>")
         user_msg = (f"<English Dialogue>\n{item['raw_en']}\n</English Dialogue>\n"
@@ -345,10 +309,8 @@ def refine_subtitles(
         ).to("cuda")
         all_input_ids.append(input_ids)
 
-    assert len(all_input_ids) == len(prompts)
     print("Tokenization done. Starting BATCH inference...")
 
-    # ── Batch inference ───────────────────────────────────────────────────────
     t_total = time.time()
     n_mismatch = 0
     debug_scenes = []
@@ -360,7 +322,7 @@ def refine_subtitles(
         batch_prompts = prompts[batch_slice]
         batch_input_ids = [t.squeeze(0) for t in all_input_ids[batch_slice]]
         
-        # Left padding
+        # Dem trai de out[max_len:] la phan sinh moi cua moi dong.
         max_len = max(t.size(0) for t in batch_input_ids)
         padded_list = []
         attention_mask_list = []
@@ -391,60 +353,35 @@ def refine_subtitles(
         elapsed = time.time() - t0
         print(f"Batch [{idx//batch_size + 1}/{(num_prompts - 1)//batch_size + 1}] finished in {elapsed:.1f}s", flush=True)
 
-        # Process each response in the batch
         for i, item in enumerate(batch_prompts):
-            out = outputs[i]
-            # Slice starting from max_len (because of left padding)
-            new_tokens = out[max_len:]
-            decoded = tokenizer.decode(new_tokens, skip_special_tokens=True)
-
-            # Gemma tra dau ba cham U+2026; ca ban dich tho lan phu de nguoi deu
-            # viet "..." (ref: 141 lan "...", 0 lan "…"). Khong doi thi 71 cue
-            # lech token -> do 09/09 mat 1,59 BLEU raw / 1,63 custom cho khong.
+            decoded = tokenizer.decode(outputs[i][max_len:], skip_special_tokens=True)
+            # Gemma sinh U+2026, ban tho va phu de nguoi viet "..." (khong doi: -1,59 BLEU).
             decoded = decoded.replace("\u2026", "...")
             lines_out = [l.strip() for l in decoded.split("\n") if l.strip()]
-            n_src = len(item["indices"])
 
-            # Record translations before adjustment for fallback tracking
-            scene_translations = []
-            for k, s_idx in enumerate(item["indices"]):
-                refined_candidate = lines_out[k] if k < len(lines_out) else ""
-                fallback_used = False
-                if k >= len(lines_out):
-                    refined_val = vinai_subs[s_idx].content
-                    fallback_used = True
-                else:
-                    refined_val = lines_out[k]
-
-                scene_translations.append({
-                    "subtitle_index": en_subs[s_idx].index,
-                    "english": en_subs[s_idx].content,
-                    "rough_vietnamese": vinai_subs[s_idx].content,
-                    "refined_vietnamese": refined_val,
-                    "fallback_used": fallback_used
-                })
-
-            # LUON giong lai bang QHD, khong bao gio anh xa theo VI TRI.
-            # Bang so dong KHONG co nghia la dung cue: mot chunk vua tach mot cue
-            # thanh hai dong vua gop hai cue lam mot thi so dong bu tru nhau, lot
-            # qua duong tat theo vi tri, va moi cue giua hai diem do truot 1 buoc
-            # (do 09/09: 30 cue trong arm _dp cu, khoi cue 103-110 lech -1).
-            # QHD dung cho truong hop khop 1-1 se tra ve dung anh xa dong nhat.
-            rough = [t["rough_vietnamese"] for t in scene_translations]
+            # LUON giong bang QHD, khong anh xa theo vi tri: LLM vua tach vua gop dong thi so dong
+            # van bang nhau ma cac cue o giua truot 1 buoc (09/09: 30 cue).
+            rough = [vinai_subs[s_idx].content for s_idx in item["indices"]]
             aligned = align_lines(rough, lines_out)
-            # SRT lay ban DA KHOA do dai; JSON debug van giu dong LLM THO de
-            # rebuild_align.py dung lai duoc arm khac tu cung file.
             locked = lock_len(rough, aligned)
-            n_kept = sum(v is not None for v in aligned)
+            n_src, n_kept = len(rough), sum(v is not None for v in aligned)
             if len(lines_out) != n_src or n_kept != n_src:
                 n_mismatch += 1
                 print(f"  ! chunk {idx + i}: LLM tra {len(lines_out)} dong / "
                       f"{n_src} cue -> giong lai QHD, giu {n_kept} dong tinh chinh",
                       flush=True)
-            for t, s_idx, val, lv in zip(scene_translations, item["indices"], aligned, locked):
-                t["refined_vietnamese"] = val if val else t["rough_vietnamese"]
-                t["fallback_used"] = val is None
-                out_subs[s_idx].content = lv if lv else t["rough_vietnamese"]
+
+            # SRT lay ban da khoa do dai; JSON debug giu dong LLM da giong nhung CHUA khoa.
+            scene_translations = []
+            for s_idx, r, val, lv in zip(item["indices"], rough, aligned, locked):
+                scene_translations.append({
+                    "subtitle_index": en_subs[s_idx].index,
+                    "english": en_subs[s_idx].content,
+                    "rough_vietnamese": r,
+                    "refined_vietnamese": val if val else r,
+                    "fallback_used": val is None
+                })
+                out_subs[s_idx].content = lv if lv else r
 
             debug_scenes.append({
                 "scene_index": idx + i,
@@ -453,27 +390,25 @@ def refine_subtitles(
             })
 
     total = time.time() - t_total
-    print(f"\n✅ Done in {total/60:.1f} min")
+    print(f"\nDone in {total/60:.1f} min")
     if n_mismatch:
-        print(f"⚠  {n_mismatch}/{len(prompts)} chunk sai so dong -> da giong lai bang QHD", flush=True)
+        print(f"{n_mismatch}/{len(prompts)} chunk sai so dong -> da giong lai bang QHD", flush=True)
 
-    # ── Write output ──────────────────────────────────────────────────────────
     for i, sub in enumerate(out_subs):
         sub.start = en_subs[i].start
         sub.end   = en_subs[i].end
         if not sub.content.strip():
-            sub.content = vinai_subs[i].content   # fallback
+            sub.content = vinai_subs[i].content
 
     os.makedirs(os.path.dirname(os.path.abspath(output_srt_path)), exist_ok=True)
     with open(output_srt_path, "w", encoding="utf-8") as f:
         f.write(srt.compose(out_subs))
-    print(f"💾 Saved: {output_srt_path}")
+    print(f"Saved: {output_srt_path}")
 
-    # Save debug information as JSON
     output_json = output_srt_path + ".json"
     with open(output_json, "w", encoding="utf-8") as f:
         json.dump(debug_scenes, f, ensure_ascii=False, indent=2)
-    print(f"💾 Saved debug JSON: {output_json}")
+    print(f"Saved debug JSON: {output_json}")
 
 
 def main():

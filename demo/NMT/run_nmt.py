@@ -9,96 +9,40 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from nltk.tokenize import sent_tokenize
 import nltk
 
-# Đảm bảo đã tải gói tokenizer 'punkt' cho NLTK
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
     nltk.download('punkt', quiet=True)
 
-# Dynamic root folder calculation (corresponds to the demo folder)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOCAL_MBART = os.path.join(ROOT_DIR, "model/NMT/mbart_model")
+DEFAULT_MODEL = LOCAL_MBART if os.path.exists(LOCAL_MBART) else "vinai/vinai-translate-en2vi-v2"
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Translate English SRT subtitles to rough Vietnamese using VinAI MBart model.")
-    parser.add_argument(
-        "--input_srt",
-        type=str,
-        required=True,
-        help="Path to the input English .srt file."
-    )
-    parser.add_argument(
-        "--output_srt",
-        type=str,
-        required=True,
-        help="Path to save the output translated Vietnamese .srt file."
-    )
-    # Xác định mặc định của model path
-    local_mbart = os.path.join(ROOT_DIR, "model/NMT/mbart_model")
-    if os.path.exists(local_mbart):
-        default_model = local_mbart
-    elif os.path.exists("/data/ndloc_bk/ntVan/infer/model/mbart_model"):
-        default_model = "/data/ndloc_bk/ntVan/infer/model/mbart_model"
-    elif os.path.exists("/data/ndloc_bk/app/model/mbart_model"):
-        default_model = "/data/ndloc_bk/app/model/mbart_model"
-    else:
-        default_model = "vinai/vinai-translate-en2vi-v2"
-        
-    parser.add_argument(
-        "--model_path",
-        type=str,
-        default=default_model,
-        help="Path or HuggingFace ID of the VinAI MBart model."
-    )
-    parser.add_argument(
-        "--cache_dir",
-        type=str,
-        default="/data/ndloc_bk/ntVan/hf_cache",
-        help="HuggingFace cache directory."
-    )
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=64,
-        help="Batch size for model inference."
-    )
-    parser.add_argument(
-        "--num_beams",
-        type=int,
-        default=1,
-        help="So beam khi giai ma. Mac dinh 1 (greedy) = dung giao thuc cua moc 'rough', dung doi."
-    )
-    parser.add_argument(
-        "--length_penalty",
-        type=float,
-        default=1.0,
-        help="mBART sinh tieng Viet chi gian 1.097 lan so voi tieng Anh, trong khi nguoi gian 1.196. "
-             "Dat 4.0 de khop ti le -> chrF 38.29 -> 39.55, COMET 0.7512 -> 0.7547. Mac dinh 1.0 = hanh vi cu.",
-    )
-    parser.add_argument(
-        "--mbr",
-        type=int,
-        default=0,
-        help="Minimum Bayes Risk: sinh K ung vien bang lay mau roi chon ung vien co chrF trung binh "
-             "cao nhat so voi cac ung vien con lai. 0 = tat (dung beam nhu cu). Bo qua --num_beams/"
-             "--length_penalty khi bat."
-    )
+    parser.add_argument("--input_srt", type=str, required=True, help="Path to the input English .srt file.")
+    parser.add_argument("--output_srt", type=str, required=True, help="Path to save the output Vietnamese .srt file.")
+    parser.add_argument("--model_path", type=str, default=DEFAULT_MODEL, help="Path or HuggingFace ID of the MBart model.")
+    parser.add_argument("--cache_dir", type=str, default="/data/ndloc_bk/ntVan/hf_cache", help="HuggingFace cache directory.")
+    parser.add_argument("--batch_size", type=int, default=64, help="Batch size for model inference.")
+    parser.add_argument("--num_beams", type=int, default=1,
+                        help="Mac dinh 1 (greedy) = giao thuc cua moc 'rough'. Pipeline dung 5.")
+    parser.add_argument("--length_penalty", type=float, default=1.0,
+                        help="Pipeline dung 4.0 (mBART sinh tieng Viet ngan hon nguoi dich). Mac dinh 1.0 = hanh vi cu.")
+    parser.add_argument("--mbr", type=int, default=0,
+                        help="MBR: sinh K ung vien, chon ung vien co chrF trung binh cao nhat so voi cac ung vien con lai. "
+                             "0 = tat.")
     parser.add_argument("--mbr_top_p", type=float, default=0.9, help="top-p khi lay mau ung vien MBR.")
-    parser.add_argument("--seed", type=int, default=0, help="Seed cho lay mau MBR (tai lap duoc).")
-    parser.add_argument(
-        "--device",
-        type=str,
-        default="cuda" if torch.cuda.is_available() else "cpu",
-        help="Device to run inference on (cuda or cpu)."
-    )
+    parser.add_argument("--seed", type=int, default=0, help="Seed cho lay mau MBR.")
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
+                        help="Device to run inference on (cuda or cpu).")
     return parser.parse_args()
 
 
 def pick_mbr(cands):
-    """Chon ung vien co chrF trung binh cao nhat so voi CA tap ung vien (ke ca ban sao).
-
-    Ban sao duoc giu lam pseudo-reference nen ung vien nao model sinh lai nhieu lan
-    duoc cong diem — dung tinh than MBR (ky vong tren phan bo mo hinh), khong phai bug.
-    """
+    """Chon ung vien co chrF trung binh cao nhat so voi CA tap ung vien (ke ca ban sao:
+    ung vien model sinh lai nhieu lan duoc cong diem, dung tinh than MBR)."""
     import sacrebleu
     cands = [c.strip() for c in cands if c.strip()]
     if not cands:
@@ -116,25 +60,18 @@ def _selftest_mbr():
     assert pick_mbr(["x"]) == "x"
     print("selftest pick_mbr OK")
 
+
 def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64, num_beams=1,
                     length_penalty=1.0, mbr=0, mbr_top_p=0.9, seed=0):
-    """
-    Dịch thô danh sách phụ đề từ tiếng Anh sang tiếng Việt dựa theo logic file gốc.
-    """
+    """Dich tung cau (sent_tokenize) cua moi cue roi noi lai; ghi de sub.content."""
     all_sentences = []
-    mapping = []  # Lưu (start_idx, end_idx) của câu cho mỗi đoạn phụ đề
-
-    # 1. Tách các câu đơn lẻ từ phụ đề bằng sent_tokenize
+    mapping = []  # (start_idx, end_idx) cua cac cau thuoc moi cue
     for sub in en_subs:
-        text = sub.content
-        sentences = sent_tokenize(text.strip())
-        sentences = [s for s in sentences if s.strip()]
+        sentences = [s for s in sent_tokenize(sub.content.strip()) if s.strip()]
         start_idx = len(all_sentences)
         all_sentences.extend(sentences)
-        end_idx = len(all_sentences)
-        mapping.append((start_idx, end_idx))
-    
-    # 2. Dịch tất cả các câu theo từng batch
+        mapping.append((start_idx, len(all_sentences)))
+
     all_translations = []
     for i in tqdm(range(0, len(all_sentences), batch_size), desc="dich"):
         batch = all_sentences[i:i + batch_size]
@@ -147,12 +84,10 @@ def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64
 
         if mbr:
             torch.manual_seed(seed + i)
-            # num_beams >= mbr  -> lay ung vien tu BEAM (giu duoc loi cua length_penalty),
-            # nguoc lai         -> lay mau top-p. Ung vien beam manh hon han tren phim thu 3.
+            # num_beams >= mbr: ung vien tu beam (giu loi cua length_penalty); nguoc lai lay mau top-p.
+            # num_beams=1 phai dat tuong minh vi generation_config.json cua mBART co san num_beams=5.
             extra = (dict(num_beams=num_beams, length_penalty=length_penalty, early_stopping=True)
                      if num_beams >= mbr else
-                     # num_beams=1 phai dat tuong minh: generation_config.json cua mBART co
-                     # san num_beams=5 -> transformers bao num_return_sequences > num_beams.
                      dict(do_sample=True, num_beams=1, top_p=mbr_top_p))
             with torch.inference_mode():
                 output_ids = model_en2vi.generate(
@@ -172,72 +107,44 @@ def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64
                 num_beams=num_beams,
                 length_penalty=length_penalty,
                 max_length=128,
-                # DUNG GO: voi length_penalty=4.0, early_stopping=True giu hinh phat o buoc
-                # XEP HANG cac gia thuyet da hoan chinh. Doi thanh False/"never" thi hinh phat
-                # di vao tieu chi dung -> beam chay toi max_length va lap chu:
-                # do 08/09/2026 tren Ode to Joy: 12885 tu -> 223477 tu, BLEU 19.15 -> 0.99.
+                # DUNG GO: early_stopping=True giu length_penalty o buoc xep hang gia thuyet.
+                # Bo di thi beam chay toi max_length va lap chu (08/09: BLEU 19,15 -> 0,99).
                 early_stopping=True
             )
+        all_translations.extend(tokenizer_en2vi.batch_decode(output_ids, skip_special_tokens=True))
 
-        decoded = tokenizer_en2vi.batch_decode(output_ids, skip_special_tokens=True)
-        all_translations.extend(decoded)
-
-    # 3. Ghép nối lại các câu dịch thô và gán lại vào content của phụ đề gốc
-    outputs = []
-    for start_idx, end_idx in mapping:
-        joined = " ".join(all_translations[start_idx:end_idx]).strip()
-        outputs.append(joined)
-        
-    for sub, output in zip(en_subs, outputs):
-        sub.content = output
-        
+    for sub, (start_idx, end_idx) in zip(en_subs, mapping):
+        sub.content = " ".join(all_translations[start_idx:end_idx]).strip()
     return en_subs
+
 
 def main():
     args = parse_args()
-    
-    # 1. Đọc và tiền xử lý file SRT tiếng Anh
-    print(f"📖 Đang đọc file phụ đề tiếng Anh: {args.input_srt}")
+
+    print(f"Doc phu de tieng Anh: {args.input_srt}")
     if not os.path.exists(args.input_srt):
-        print(f"❌ Lỗi: File không tồn tại -> {args.input_srt}")
+        print(f"Loi: file khong ton tai -> {args.input_srt}")
         return
-        
+
     with open(args.input_srt, "r", encoding="utf-8") as f:
         subtitles = list(srt.parse(f.read()))
-        
     for sub in subtitles:
-        # Xóa xuống dòng thừa, chuẩn hóa khoảng trắng thành 1 dòng duy nhất
         sub.content = " ".join(line.strip() for line in sub.content.splitlines() if line.strip())
         sub.content = re.sub(r'\s+', ' ', sub.content).strip()
-        
-    print(f"✓ Đã load {len(subtitles)} phụ đề.")
+    print(f"Da load {len(subtitles)} phu de. Tai mo hinh {args.model_path} len {args.device}")
 
-    # 2. Khởi tạo Tokenizer và Model dịch VinAI
-    print(f"🚀 Đang tải mô hình từ: {args.model_path}")
-    print(f"⚙️ Thiết bị sử dụng: {args.device}")
-    
     try:
-        tokenizer_en2vi = AutoTokenizer.from_pretrained(
-            args.model_path,
-            src_lang="en_XX",
-            cache_dir=args.cache_dir
-        )
-        model_en2vi = AutoModelForSeq2SeqLM.from_pretrained(
-            args.model_path,
-            cache_dir=args.cache_dir
-        )
+        tokenizer_en2vi = AutoTokenizer.from_pretrained(args.model_path, src_lang="en_XX", cache_dir=args.cache_dir)
+        model_en2vi = AutoModelForSeq2SeqLM.from_pretrained(args.model_path, cache_dir=args.cache_dir)
         model_en2vi.to(args.device)
-        if args.device == "cuda" or "cuda" in args.device:
-            model_en2vi.half()  # Dùng FP16 để tăng tốc độ và tiết kiệm VRAM
-        print("✓ Tải mô hình thành công!")
+        if "cuda" in args.device:
+            model_en2vi.half()
     except Exception as e:
-        print(f"❌ Lỗi khi tải mô hình: {e}")
+        print(f"Loi khi tai mo hinh: {e}")
         return
 
-    # 3. Tiến hành dịch thô
-    print(f"✍️ Đang thực hiện dịch thô phụ đề... (num_beams={args.num_beams}, length_penalty={args.length_penalty})")
+    print(f"Dich (num_beams={args.num_beams}, length_penalty={args.length_penalty})")
     start_time = time.time()
-    
     translated_subs = translate_en2vi(
         subtitles,
         model_en2vi,
@@ -250,18 +157,13 @@ def main():
         mbr_top_p=args.mbr_top_p,
         seed=args.seed,
     )
-    
-    end_time = time.time()
-    print(f"✓ Dịch xong trong {end_time - start_time:.2f} giây.")
+    print(f"Dich xong trong {time.time() - start_time:.2f} giay.")
 
-    # 4. Ghi file phụ đề tiếng Việt đã dịch
     os.makedirs(os.path.dirname(args.output_srt) or ".", exist_ok=True)
-    srt_content = srt.compose(translated_subs)
-    
     with open(args.output_srt, "w", encoding="utf-8") as f:
-        f.write(srt_content)
-        
-    print(f"💾 Kết quả phụ đề đã được lưu tại: {args.output_srt}")
+        f.write(srt.compose(translated_subs))
+    print(f"Da luu: {args.output_srt}")
+
 
 if __name__ == "__main__":
     main()

@@ -1,62 +1,47 @@
-# Pipeline Tự Động Hóa Dịch Thuật & Tinh Chỉnh Phụ Đề Phim End-to-End
+# Pipeline phụ đề phim Anh → Việt
 
-Dự án này tích hợp toàn bộ các mô hình trí tuệ nhân tạo (ASR, Scene Segmentation, VLM, NMT, LLM) vào một tiến trình duy nhất để tạo ra phụ đề tiếng Việt tự nhiên và chính xác dựa trên ngữ cảnh hình ảnh của từng cảnh phim.
+Chạy từ thư mục gốc repo (`NLHV/ntVan`) bằng môi trường `/data/ndloc_bk/ntVan/demo_env/bin/python3`.
 
----
-
-## 🚀 Sơ đồ Hoạt động (Pipeline Flow)
+## Hai kiến trúc (`--arch`)
 
 ```
-[Video Đầu Vào] 
-  │
-  ├──► (FFmpeg) ──────► Trích xuất Audio (.wav) ──► (ASR Whisper) ────► Phụ đề Tiếng Anh (.srt)
-  │                                                                           │
-  │                                                                           ▼
-  └──► (Scene Seg) ───► Phân đoạn Cảnh (JSON)                               (NMT MBart)
-           │                                                                  │
-           ▼ (Cắt video clip nhỏ)                                             ▼
-     [Video Scene Clips] ──► (VLM VideoLLama3) ──► Context (JSON) ──► Phụ đề Việt Thô (.srt)
-                                                      │                       │
-                                                      ▼                       ▼
-                                            [ Gemma 3 Tinh chỉnh ] ◄──────────┘
-                                                      │
-                                                      ▼
-                                         [ Phụ đề Việt Tinh chỉnh ]
+v2 (mặc định, ~14 phút cho phim 94 phút)
+  video ─ffmpeg─> wav ─ASR (Whisper + VAD)─> SRT Anh ─NMT (mBART, beam 5, lp 4.0)─> SRT Việt thô
+
+legacy (~118 phút): v2 + 3 tầng
+  video ─scene_seg─> cảnh ─VLM─> caption ┐
+  SRT Anh + SRT Việt thô ─────────────────┴─Gemma-3 12B LoRA (khóa độ dài 0,90)─> SRT Việt tinh chỉnh
 ```
 
----
-
-## 💻 Hướng dẫn Sử dụng
-
-Chạy toàn bộ pipeline tự động từ đầu đến cuối bằng một câu lệnh duy nhất:
+Bản giao `pm0.90` trong Bảng 4.7 (Ode to Joy: BLEU 37,90, PronF1 0,830) là đầu ra kiểu legacy;
+v2 cho 36,00. Chi tiết số đo: `docs/BANG_47_ODE_TO_JOY_2026-09-09.md`.
 
 ```bash
-/data/ndloc_bk/ntVan/demo_env/bin/python3 /data/ndloc_bk/ntVan/demo/run_pipeline.py \
-    --video_path "/data/ndloc_bk/ntVan/demo/test.mp4"
+PY=/data/ndloc_bk/ntVan/demo_env/bin/python3
+$PY demo/run_pipeline.py --video_path phim.mkv                                    # v2
+HF_TOKEN=... $PY demo/run_pipeline.py --video_path phim.mkv --arch legacy          # legacy
 ```
 
-### 📋 Các tham số dòng lệnh (CLI Arguments)
+| Tham số | Mặc định | Ghi chú |
+| :--- | :--- | :--- |
+| `--video_path` | bắt buộc | |
+| `--output_dir` | `demo/output` | mọi file trung gian; bước nào đã có file đầu ra thì bỏ qua |
+| `--cache_dir` | `demo/cache` | |
+| `--seed` | `42` | |
+| `--arch` | `v2` | `v2` hoặc `legacy` |
+| `--vlm_fps` | `1` | chỉ legacy |
+| `--llm_batch_size` | `1` | chỉ legacy; >1 làm lệch dòng, không tăng |
 
-| Tham số | Kiểu dữ liệu | Mặc định | Mô tả |
-| :--- | :--- | :--- | :--- |
-| `--video_path` | `str` | *Bắt buộc* | Đường dẫn tới file video đầu vào cần dịch (`.mp4`, `.mkv`...). |
-| `--output_dir` | `str` | `demo/output` | Thư mục lưu toàn bộ kết quả trung gian và sản phẩm phụ đề cuối cùng. |
-| `--cache_dir` | `str` | `demo/cache` | Thư mục chứa mô hình cache để chạy offline. |
-| `--seed` | `int` | `42` | Khóa trạng thái ngẫu nhiên giúp **đảm bảo kết quả dịch đồng nhất 100%** giữa các lần chạy. |
-| `--vlm_fps` | `float` | `0.5` | Tần suất trích xuất khung hình từ video của VideoLLaMA3. |
-| `--llm_batch_size` | `int` | `8` | Kích thước batch xử lý phụ đề đồng thời của Gemma 3. |
+## File đầu ra (ví dụ `phim.mkv`)
 
----
+| File | Tầng |
+| :--- | :--- |
+| `phim.wav` | ffmpeg, 16 kHz mono |
+| `phim.(Tiếng Anh).srt` | ASR |
+| `phim.(Tiếng Việt_dich_tho).srt` | NMT — **đầu ra cuối của v2** |
+| `phim.scenes.json`, `phim_scenes/` | scene_seg (legacy) |
+| `phim.captions.json` | VLM (legacy) |
+| `phim.(Tiếng Việt_tinh_chinh).srt` (+ `.json` debug) | Gemma (legacy) — **đầu ra cuối của legacy** |
 
-## 📦 Định dạng các File Đầu ra (Outputs)
-
-Toàn bộ các file kết quả sẽ được xuất ra thư mục `--output_dir` (Ví dụ với đầu vào là `test.mp4`):
-
-1.  **`test.wav`**: File âm thanh tách từ video gốc (16kHz Mono).
-2.  **`test.(Tiếng Anh).srt`**: Phụ đề tiếng Anh trích xuất từ giọng nói (ASR).
-3.  **`test.scenes.json`**: Danh sách mốc thời gian bắt đầu/kết thúc các phân cảnh.
-4.  **`test_scenes/`**: Thư mục chứa các clip video cắt nhỏ cho từng phân cảnh.
-5.  **`test.captions.json`**: Ngữ cảnh hình ảnh (VLM) của từng phân cảnh (nhân vật, quan hệ, mô tả hành động).
-6.  **`test.(Tiếng Việt_dich_tho).srt`**: Bản dịch thô tiếng Việt (NMT).
-7.  **`test.(Tiếng Việt_tinh_chinh).srt`**: Phụ đề tiếng Việt hoàn thiện đã được Gemma 3 tinh chỉnh theo ngữ cảnh.
-8.  **`test.(Tiếng Việt_tinh_chinh).srt.json`**: File log JSON chi tiết đối chiếu dòng dịch để phục vụ kiểm thử.
+Mỗi module chạy riêng được; xem README trong `ASR/`, `NMT/`, `LLM/`, `VLM/`, `scene_seg/`.
+Kiểm tra định tuyến không cần GPU: `python demo/test_pipeline_arch.py`.

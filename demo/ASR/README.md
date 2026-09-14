@@ -1,38 +1,28 @@
-# Hướng dẫn Chạy ASR (Whisper) Trích xuất Phụ đề Tiếng Anh
+# ASR: Whisper + VAD → SRT tiếng Anh
 
-Thư mục này chứa script chạy mô hình **Whisper Medium** đã được tối ưu hóa sâu để trích xuất phụ đề tiếng Anh (`.srt`) từ file âm thanh phim (`.wav`) với tốc độ nhanh nhất và hiệu năng ổn định trên máy chủ GPU dùng chung.
-
----
-
-## 📂 Các file trong thư mục
-* [asr_movie_infer.py](file:///data/ndloc_bk/ntVan/demo/ASR/asr_movie_infer.py): Script Python chính chạy tách thoại (VAD) và nhận dạng giọng nói bằng Whisper.
-* [README.md](file:///data/ndloc_bk/ntVan/demo/ASR/README.md): Hướng dẫn sử dụng chi tiết (file này).
-
----
-
-## ⚙️ Cấu hình Môi trường chạy
-Script yêu cầu sử dụng môi trường python chuyên biệt hỗ trợ PyTorch, Whisper, SoundFile và ffmpeg:
-* **Đường dẫn Python Virtualenv**: `/data/ndloc_bk/ntVan/demo_env/bin/python3`
-
----
-
-## 🚀 Hướng dẫn Sử dụng
-
-Chạy trích xuất phụ đề từ một file âm thanh bằng lệnh sau:
+`asr_movie_infer.py` nạp `demo/model/ASR/whisper-medium-13-openai.pt` ngay khi import.
 
 ```bash
-/data/ndloc_bk/ntVan/demo_env/bin/python3 /data/ndloc_bk/ntVan/demo/ASR/asr_movie_infer.py \
-    --audio_path "/data/ndloc_bk/ntVan/data/Movie/audio/S04E019_Thưa_tòa.wav" \
-    --out_dir "/data/ndloc_bk/ntVan/demo/ASR/output" \
-    --out_name "S04E019_Thưa_tòa"
+/data/ndloc_bk/ntVan/demo_env/bin/python3 demo/ASR/asr_movie_infer.py \
+    --audio_path phim.wav --out_dir demo/output --out_name phim
 ```
 
-### 📋 Các tham số dòng lệnh (Arguments)
+| Tham số | Mặc định |
+| :--- | :--- |
+| `--audio_path` | bắt buộc |
+| `--out_dir` | `output` |
+| `--out_name` | tên file audio |
 
-| Tham số | Kiểu | Mặc định | Mô tả |
-| :--- | :--- | :--- | :--- |
-| `--audio_path` | `str` | *Bắt buộc* | Đường dẫn file âm thanh đầu vào dạng `.wav` hoặc `.mp4`. |
-| `--out_dir` | `str` | `output` | Thư mục lưu kết quả file phụ đề `.srt` đầu ra. |
-| `--out_name` | `str` | `None` | Tên của file đầu ra (không bao gồm phần mở rộng). Nếu không nhập, mặc định lấy tên file audio. |
+Cách chạy:
+1. Silero VAD (ngưỡng 0,2), đệm 0,2 s đầu / 1,3 s cuối; lặng > 3 s thì tách chunk.
+2. Mỗi chunk (các đoạn có tiếng đã ghép) qua `whisper.transcribe`: greedy T=0, `word_timestamps=True`,
+   `hallucination_silence_threshold=2.0`. Biến môi trường `ASR_BEAM`, `ASR_TEMPS` chỉ dùng cho arm thí nghiệm.
+3. Bỏ segment có `avg_logprob < -1`, `no_speech_prob > 0.9` hoặc `compression_ratio > 6`; bỏ cue chỉ gồm tiếng đệm.
+4. Đổi mốc từ audio đã ghép về trục thời gian gốc rồi ghi SRT.
 
+Lưu ý đã biết:
+- `vad_chunks/` và `segment_info.json` ghi vào **thư mục đang đứng**: hai lần chạy song song phải ở hai thư mục khác nhau.
+- `hallucination_silence_threshold=2.0` làm Whisper nhảy trọn 30 s khi từ cuối nằm trong 2 s cuối cửa sổ,
+  nên mất từ ở đường nối cửa sổ. Muốn đổi phải đo lại trên GPU.
 
+`asr_fw_infer.py` là arm faster-whisper đã loại (VAD và bộ lọc khác, không so trực tiếp với file chính được).

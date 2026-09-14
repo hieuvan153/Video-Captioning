@@ -1,5 +1,4 @@
 import time
-start_imports_t = time.time()
 import os
 import cv2
 import json
@@ -10,7 +9,6 @@ import glob
 import re
 import transformers.image_utils as iu
 
-# Dynamic root folder calculation (corresponds to the demo folder)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Monkey patch VideoInput if not present in the transformers version
@@ -18,11 +16,8 @@ if not hasattr(iu, "VideoInput"):
     class VideoInput:
         pass
     iu.VideoInput = VideoInput
-print("Monkey patch VideoInput OK")
 
 from transformers import AutoModelForCausalLM, AutoProcessor
-end_imports_t = time.time()
-print(f"Thời gian nạp thư viện (Imports): {end_imports_t - start_imports_t:.4f}s")
 
 def patch_videollama_processor_file(cache_dir):
     """
@@ -48,7 +43,6 @@ def patch_videollama_processor_file(cache_dir):
                 modified = True
                 
             # Patch 2: KeyError: 'common_kwargs' in default_kwargs loop
-            t2 = "for modality in default_kwargs:\n            default_kwargs[modality]"
             t2_full = "for modality in default_kwargs:\n            default_kwargs[modality] = ModelProcessorKwargs._defaults.get(modality, {}).copy()"
             r2_full = "for modality in default_kwargs:\n            if modality == \"common_kwargs\":\n                continue\n            default_kwargs[modality] = ModelProcessorKwargs._defaults.get(modality, {}).copy()"
             if t2_full in content:
@@ -183,15 +177,12 @@ def run_vlm_captioning(
     # Auto-patch the dynamic module if already cached
     patch_videollama_processor_file(cache_dir)
     
-    # 1. Tìm tất cả các file video trong thư mục input
     video_extensions = ["*.mp4", "*.avi", "*.mkv", "*.mov", "*.webm"]
     video_files = []
     for ext in video_extensions:
         video_files.extend(glob.glob(os.path.join(input_dir, ext)))
-        # Thêm hỗ trợ chữ hoa/thường
         video_files.extend(glob.glob(os.path.join(input_dir, ext.upper())))
     
-    # Loại bỏ trùng lặp và sắp xếp theo tên file
     video_files = sorted(list(set(video_files)))
     
     if not video_files:
@@ -200,7 +191,6 @@ def run_vlm_captioning(
         
     print(f"Tìm thấy {len(video_files)} file video cần xử lý.")
     
-    # 2. Thử tìm file metadata để ánh xạ
     metadata_map = {}
     if scenes_json_path and os.path.exists(scenes_json_path):
         try:
@@ -231,7 +221,6 @@ def run_vlm_captioning(
                 except Exception as e:
                     print(f"Lỗi khi đọc file metadata {meta_path}: {e}")
 
-    # 3. Khởi tạo mô hình VideoLLama3
     print(f"Đang tải mô hình {model_path} lên {device}...")
     t_load_start = time.time()
     try:
@@ -256,33 +245,29 @@ def run_vlm_captioning(
 
     results = []
 
-    # 4. Duyệt qua từng file video để phân tích
     for idx, video_path in enumerate(video_files):
         filename = os.path.basename(video_path)
         scene_id = extract_scene_id(filename)
         
         print(f"[{idx+1}/{len(video_files)}] Đang xử lý: {filename} (scene_id: {scene_id})")
         
-        # Đọc thông tin video bằng OpenCV
         cap = cv2.VideoCapture(video_path)
         fps_video = cap.get(cv2.CAP_PROP_FPS)
         frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
         
         if fps_video == 0 or frame_count == 0:
-            print(f"  -> Lỗi: Không thể mở video hoặc fps/frame_count bằng 0. Bỏ qua.")
+            print("  -> Lỗi: Không thể mở video hoặc fps/frame_count bằng 0. Bỏ qua.")
             cap.release()
             continue
             
         duration_sec = frame_count / fps_video
         cap.release()
         
-        # Kiểm tra độ dài tối thiểu
         if duration_sec < min_duration:
             print(f"  -> Bỏ qua scene do thời lượng ngắn ({duration_sec:.2f}s < {min_duration}s)")
             caption_text = ""
         else:
             t_infer_start = time.time()
-            # Tạo conversation theo prompt chuẩn của VideoLLama3
             conversation = [
                 {
                     "role": "user",
@@ -310,13 +295,11 @@ Constraints: Use visual evidence only. Ignore background crowds. Strictly limit 
                     return_tensors="pt"
                 )
                 
-                # Chuyển inputs lên device
                 inputs = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in inputs.items()}
                 if "pixel_values" in inputs:
                     inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
                 t_prep_end = time.time()
                 
-                # Sinh caption
                 t_gen_start = time.time()
                 with torch.inference_mode():
                     output_ids = model.generate(**inputs, max_new_tokens=300)
@@ -324,17 +307,17 @@ Constraints: Use visual evidence only. Ignore background crowds. Strictly limit 
                 
                 caption_text = processor.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
                 t_infer_end = time.time()
-                print(f"  -> Caption thành công. Chi tiết thời gian:")
+                print("  -> Caption thành công. Chi tiết thời gian:")
                 print(f"     + Chuẩn bị inputs (processor & video extraction): {t_prep_end - t_prep_start:.4f}s")
                 print(f"     + Sinh text (model.generate): {t_gen_end - t_gen_start:.4f}s")
                 print(f"     + Tổng thời gian infer scene: {t_infer_end - t_infer_start:.4f}s")
             except Exception as e:
+                # Luu y: chuoi loi thanh caption va di vao prompt cua Gemma (Ode to Joy: 0/114 canh).
                 print(f"  -> Lỗi khi phân tích video: {e}")
                 caption_text = f"Error during analysis: {e}"
             finally:
                 free_gpu_memory(device)
 
-        # Lấy thông tin metadata sẵn có
         meta_info = metadata_map.get(scene_id, {})
         
         scene_result = {
@@ -349,7 +332,7 @@ Constraints: Use visual evidence only. Ignore background crowds. Strictly limit 
         
         results.append(scene_result)
         
-        # Lưu kết quả tạm thời sau mỗi scene đề phòng lỗi nửa chừng
+        # Ghi sau moi canh de khong mat ket qua neu dung giua chung
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=2)

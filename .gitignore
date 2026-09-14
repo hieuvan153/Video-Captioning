@@ -27,3 +27,7 @@ van_env/
 *.pt
 *.bin
 *.safetensors
+
+# Artefact moi lan chay ASR (ghi vao thu muc dang dung)
+segment_info.json
+vad_chunks/

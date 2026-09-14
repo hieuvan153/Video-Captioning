@@ -5,19 +5,14 @@ import json
 import subprocess
 import argparse
 import shutil
-import pickle
 from fractions import Fraction
 from types import SimpleNamespace
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.backends.cudnn as cudnn
 
-# Dynamic root folder calculation (corresponds to the demo folder)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WORKSPACE_ROOT = os.path.dirname(ROOT_DIR)
 
-# Resolve local dependencies path inside this folder
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
 src_root = os.path.join(LOCAL_DIR, "src")
 
@@ -26,12 +21,10 @@ if src_root not in sys.path:
 
 import importlib.util
 
-# Load shotdetect script
 shotdetect_spec = importlib.util.spec_from_file_location("shotdetect_script", os.path.join(src_root, "shotdetect.py"))
 shotdetect_module = importlib.util.module_from_spec(shotdetect_spec)
 shotdetect_spec.loader.exec_module(shotdetect_module)
 
-# Load extract_embeddings script
 embeddings_spec = importlib.util.spec_from_file_location("extract_embeddings", os.path.join(src_root, "extract_embeddings.py"))
 extract_embeddings = importlib.util.module_from_spec(embeddings_spec)
 embeddings_spec.loader.exec_module(extract_embeddings)
@@ -200,12 +193,10 @@ def main():
     parser.add_argument("--temp_dir", type=str, default="./temp_predict_demo", help="Temporary directory for runtime artifacts")
     parser.add_argument("--keep_temp", action="store_true", help="Keep temporary directory after processing")
     
-    # Scene cutting options
     parser.add_argument("--cut_scenes", type=bool, default=True, help="Automatically cut the video into scene .mp4 files")
     parser.add_argument("--output_scenes_dir", type=str, default=None, 
                         help="Folder to save the cut mp4 scenes (default: output_json_basename_scenes)")
     
-    # Model parameters
     parser.add_argument("--scrl_checkpoint", type=str, 
                         default=os.path.join(ROOT_DIR, "model/scene_seg/checkpoint_0099.pth.tar"),
                         help="Path to SCRL encoder checkpoint")
@@ -213,14 +204,12 @@ def main():
                         default=os.path.join(ROOT_DIR, "model/scene_seg/model_best.pth.tar"),
                         help="Path to BiLSTM classifier checkpoint")
     
-    # Thresholds
     parser.add_argument("--thresh_high", type=float, default=0.5, help="High confidence threshold for anchor boundary")
     parser.add_argument("--max_scene_shots", type=int, default=40, help="Maximum number of shots in a scene before splitting")
     parser.add_argument("--split_prob_thresh", type=float, default=0.02, help="Probability threshold for splitting long scenes")
 
     args = parser.parse_args()
 
-    # Verify input video exists
     if not os.path.exists(args.video_path):
         print(f"Error: Video file not found: {args.video_path}")
         sys.exit(1)
@@ -260,18 +249,15 @@ def run_scene_segmentation(
     if bilstm_checkpoint is None:
         bilstm_checkpoint = os.path.join(ROOT_DIR, "model/scene_seg/model_best.pth.tar")
 
-    # Set CUDA device
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     setup_seed(100)
 
-    # Setup directories
     video_abs_path = os.path.abspath(video_path)
     video_name = os.path.splitext(os.path.basename(video_path))[0]
     temp_dir = os.path.abspath(temp_dir)
     os.makedirs(temp_dir, exist_ok=True)
 
-    # Set outputs paths
     output_json_abs = os.path.abspath(output_json)
     os.makedirs(os.path.dirname(output_json_abs), exist_ok=True)
 
@@ -279,7 +265,7 @@ def run_scene_segmentation(
         output_scenes_dir = os.path.splitext(output_json_abs)[0] + "_scenes"
     output_scenes_dir_abs = os.path.abspath(output_scenes_dir)
 
-    print(f"--- Step 1: Run Shot Detection & Keyframe Extraction ---")
+    print("--- Step 1: Run Shot Detection & Keyframe Extraction ---")
     shot_args = SimpleNamespace(
         video_path=video_abs_path,
         save_data_root_path=temp_dir,
@@ -290,14 +276,13 @@ def run_scene_segmentation(
         keep_resolution=False,
         avg_sample=False,
         begin_time=None,
-        end_time=120.0,
+        end_time=120.0,  # chi dung khi begin_time khac None -> ca phim duoc quet
         begin_frame=None,
         end_frame=1000
     )
-    print(f"Executing shotdetect.main directly in Python")
+    print("Executing shotdetect.main directly in Python")
     shotdetect_module.main(shot_args, temp_dir)
 
-    # Paths created by shotdetect.py
     shot_txt_file = os.path.join(temp_dir, "shot_txt", f"{video_name}.txt")
     shot_keyf_dir = os.path.join(temp_dir, "shot_keyf")
 
@@ -305,7 +290,6 @@ def run_scene_segmentation(
         print(f"Error: Shot boundary file was not generated: {shot_txt_file}")
         return
 
-    # Read shots and count lines
     with open(shot_txt_file, "r") as f:
         num_lines = sum(1 for line in f if line.strip())
     print(f"Detected {num_lines} shots.")
@@ -313,7 +297,6 @@ def run_scene_segmentation(
     fps = get_fps(video_abs_path)
     print(f"Video FPS: {fps}")
 
-    # Read shots start/end frames
     shots = []
     with open(shot_txt_file, "r") as f:
         for line in f:
@@ -325,7 +308,6 @@ def run_scene_segmentation(
 
     if num_lines < 2:
         print("Warning: Too few shots detected. The video might be too short.")
-        # Create minimal 1 scene output
         if shots:
             start_t = shots[0][0] / fps
             end_t = (shots[-1][1] + 1) / fps
@@ -340,7 +322,7 @@ def run_scene_segmentation(
             cut_scenes_ffmpeg(video_abs_path, [0], shots, fps, output_scenes_dir_abs)
         return
 
-    print(f"--- Step 2: Create Dummy JSON file for Embeddings Extraction ---")
+    print("--- Step 2: Create Dummy JSON file for Embeddings Extraction ---")
     dummy_json_path = os.path.join(temp_dir, f"{video_name}.v1.json")
     dummy_data = {
         "test": [
@@ -356,7 +338,7 @@ def run_scene_segmentation(
         json.dump(dummy_data, f, indent=4)
     print(f"Dummy metadata JSON written to {dummy_json_path}")
 
-    print(f"--- Step 3: Run SCRL Embedding Feature Extraction ---")
+    print("--- Step 3: Run SCRL Embedding Feature Extraction ---")
     embeddings_save_dir = os.path.join(temp_dir, "embeddings")
     os.makedirs(embeddings_save_dir, exist_ok=True)
 
@@ -382,8 +364,7 @@ def run_scene_segmentation(
         print(f"Error: Embeddings pkl file not found: {embeddings_pkl}")
         return
 
-    print(f"--- Step 4: Run BiLSTM Scene Segmentation Predictor ---")
-    # BiLSTM Config setup
+    print("--- Step 4: Run BiLSTM Scene Segmentation Predictor ---")
     bilstm_args = SimpleNamespace(
         pkl_path_test=embeddings_pkl,
         test_bs=1,
@@ -398,7 +379,6 @@ def run_scene_segmentation(
         split_prob_thresh=split_prob_thresh
     )
 
-    # Initialize model
     model = BiLSTM(
         input_feature_dim=bilstm_args.dim,
         input_drop_rate=bilstm_args.input_drop_rate
@@ -406,7 +386,6 @@ def run_scene_segmentation(
 
     load_checkpoint(model, bilstm_checkpoint)
 
-    # Load dataset
     test_dataset = MovieNet_SceneSeg_Dataset_Embeddings_Val(
         pkl_path=bilstm_args.pkl_path_test,
         sampled_shot_num=bilstm_args.seq_len
@@ -419,7 +398,7 @@ def run_scene_segmentation(
     boundaries, _ = inference(bilstm_args, model, test_loader)
     print(f"Predicted scene boundary shot indices: {boundaries}")
 
-    print(f"--- Step 5: Convert Boundaries to Timestamps ---")
+    print("--- Step 5: Convert Boundaries to Timestamps ---")
     scenes_metadata = []
 
     for i in range(len(boundaries)):
@@ -444,19 +423,16 @@ def run_scene_segmentation(
             "duration": round(duration, 6)
         })
 
-    # Save to JSON
     with open(output_json_abs, "w", encoding="utf-8") as f:
         json.dump(scenes_metadata, f, indent=2)
     print(f"Scene segmentation timestamps saved to {output_json_abs}")
 
-    # Optional: Cut scene videos
     if cut_scenes:
-        print(f"--- Step 6: Cut Scene Video Clips ---")
+        print("--- Step 6: Cut Scene Video Clips ---")
         cut_scenes_ffmpeg(video_abs_path, boundaries, shots, fps, output_scenes_dir_abs)
 
-    print(f"[SUCCESS] Scene segmentation and video cutting completed successfully!")
+    print("[SUCCESS] Scene segmentation and video cutting completed successfully!")
 
-    # Cleanup
     if not keep_temp:
         print(f"Cleaning up temporary directory: {temp_dir}")
         shutil.rmtree(temp_dir, ignore_errors=True)

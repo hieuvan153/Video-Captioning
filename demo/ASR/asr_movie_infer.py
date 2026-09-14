@@ -4,101 +4,52 @@ import whisper
 import os
 import ffmpeg
 import srt
+import soundfile as sf
 from tqdm import tqdm
 import datetime
 import json
 import shutil
 
-# Dynamic root folder calculation (corresponds to the demo folder)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 print("Running Whisper...")
 model_asr = whisper.load_model(os.path.join(ROOT_DIR, "model/ASR/whisper-medium-13-openai.pt"))
 
-# Whisper Transcription Parameters
-language = "english"
-translation_mode = "No translation"
-max_attempts = 1
-verbose = False
-
-# VAD Settings
+VAD_SR = 16000
 vad_threshold = 0.2
-chunk_threshold = 3.0
+chunk_threshold = 3.0  # lang dai hon so giay nay thi tach chunk moi
 
-# Decoding Options
-best_of = None
-beam_size = int(os.environ["ASR_BEAM"]) if os.environ.get("ASR_BEAM") else None  # mac dinh None = greedy (giu nguyen)
-patience = None
-length_penalty = None
-prefix = ""
-suppress_tokens = "-1"
-suppress_blank = True
-without_timestamps = False
-max_initial_timestamp = 1.0
-fp16 = True
-
-# Transcriber Settings
-temperature = tuple(float(x) for x in os.environ.get("ASR_TEMPS", "0").split(","))  # mac dinh (0.0,) == 0.0 cu
-compression_ratio_threshold = 2.4
-logprob_threshold = -1.0
-no_speech_threshold = 0.9
-condition_on_previous_text = False
-initial_prompt = ""
-word_timestamps = True
-clip_timestamps = "0"
-hallucination_silence_threshold = 2.0
-
-if translation_mode == "End-to-end Whisper (default)":
-    task = "translate"
-elif translation_mode == "Whisper -> DeepL":
-    task = "transcribe"
-elif translation_mode == "No translation":
-    task = "transcribe"
-else:
-    raise ValueError("Invalid translation mode")
-
-transcription_options = {
-    "verbose": verbose,
-    "compression_ratio_threshold": compression_ratio_threshold,
-    "logprob_threshold": logprob_threshold,
-    "no_speech_threshold": no_speech_threshold,
-    "condition_on_previous_text": condition_on_previous_text,
-    "initial_prompt": initial_prompt,
-    "word_timestamps": word_timestamps,
-    "clip_timestamps": clip_timestamps,
-    "hallucination_silence_threshold": hallucination_silence_threshold
-}
-
-decoding_options = {
-    "task": task,
-    "language": language,
-    "temperature": temperature,
-    "best_of": best_of,
-    "beam_size": beam_size,
-    "patience": patience,
-    "length_penalty": length_penalty,
-    "prefix": prefix,
-    "suppress_tokens": suppress_tokens,
-    "suppress_blank": suppress_blank,
-    "without_timestamps": without_timestamps,
-    "max_initial_timestamp": max_initial_timestamp,
-    "fp16": fp16,
+# Mac dinh greedy T=0; ASR_BEAM / ASR_TEMPS chi dat cho arm thi nghiem a2.
+transcribe_options = {
+    "task": "transcribe",
+    "language": "english",
+    "temperature": tuple(float(x) for x in os.environ.get("ASR_TEMPS", "0").split(",")),
+    "beam_size": int(os.environ["ASR_BEAM"]) if os.environ.get("ASR_BEAM") else None,
+    "best_of": None,
+    "patience": None,
+    "length_penalty": None,
+    "prefix": "",
+    "suppress_tokens": "-1",
+    "suppress_blank": True,
+    "without_timestamps": False,
+    "max_initial_timestamp": 1.0,
+    "fp16": True,
+    "verbose": False,
+    "compression_ratio_threshold": 2.4,
+    "logprob_threshold": -1.0,
+    "no_speech_threshold": 0.9,
+    "condition_on_previous_text": False,
+    "initial_prompt": "",  # "" khac None: cua so dau moi chunk nhan prompt " "
+    "word_timestamps": True,
+    "clip_timestamps": "0",
+    # Tu cuoi nam trong 2 s cuoi cua so thi whisper nhay tron 30 s, bo cau dang do -> mat tu o duong noi.
+    "hallucination_silence_threshold": 2.0,
 }
 
 def run(audio_path, out_dir = None, out_name = None):
-    file_name = os.path.basename(audio_path)
-    name_only = os.path.splitext(file_name)[0]
-    
-    if out_dir is None:
-        if out_name is None:
-            out_path = "output/"+name_only+".(Tiếng Anh).srt"
-        else:
-            out_path = "output/"+out_name+".(Tiếng Anh).srt"
-    else:
-        if out_name is None:
-            out_path = os.path.join(out_dir, name_only+".(Tiếng Anh).srt")
-        else:
-            out_path = os.path.join(out_dir, out_name+".(Tiếng Anh).srt")
+    name = os.path.splitext(os.path.basename(audio_path))[0] if out_name is None else out_name
+    srt_name = name + ".(Tiếng Anh).srt"
+    out_path = "output/" + srt_name if out_dir is None else os.path.join(out_dir, srt_name)
 
     print("Encoding audio...")
     if os.path.exists("vad_chunks"):
@@ -121,30 +72,21 @@ def run(audio_path, out_dir = None, out_name = None):
         onnx=True,
         source="local"
     )
+    get_speech_timestamps, _, _, _, collect_chunks = utils
 
-    (get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = utils
-
-    # Custom implementation of read_audio & save_audio to bypass torchaudio/torchcodec CUDA dependencies
-    def custom_read_audio(path: str, sampling_rate: int = 16000) -> torch.Tensor:
-        import soundfile as sf
-        wav, sr = sf.read(path, dtype='float32')
-        if sr != sampling_rate:
-            raise ValueError(f"Sampling rate of {path} is {sr}, expected {sampling_rate}")
-        return torch.from_numpy(wav)
-
-    def custom_save_audio(path: str, tensor: torch.Tensor, sampling_rate: int = 16000):
-        import soundfile as sf
-        sf.write(path, tensor.numpy(), sampling_rate)
-
-    VAD_SR = 16000
-    wav = custom_read_audio("vad_chunks/silero_temp.wav", sampling_rate=VAD_SR)
+    # Doc bang soundfile thay read_audio cua silero de khong phu thuoc torchaudio.
+    wav, sr = sf.read("vad_chunks/silero_temp.wav", dtype='float32')
+    if sr != VAD_SR:
+        raise ValueError(f"Sampling rate of vad_chunks/silero_temp.wav is {sr}, expected {VAD_SR}")
+    wav = torch.from_numpy(wav)
     t = get_speech_timestamps(wav, model, sampling_rate=VAD_SR, threshold=vad_threshold)
 
+    # Dem 0,2 s dau / 1,3 s duoi (don vi mau) roi bo phan chong lan.
     for i in range(len(t)):
-        t[i]["start"] = max(0, t[i]["start"] - 3200)  # 0.2s head
-        t[i]["end"] = min(wav.shape[0] - 16, t[i]["end"] + 20800)  # 1.3s tail
+        t[i]["start"] = max(0, t[i]["start"] - 3200)
+        t[i]["end"] = min(wav.shape[0] - 16, t[i]["end"] + 20800)
         if i > 0 and t[i]["start"] < t[i - 1]["end"]:
-            t[i]["start"] = t[i - 1]["end"]  # Remove overlap
+            t[i]["start"] = t[i - 1]["end"]
 
     u = [[]]
     for i in range(len(t)):
@@ -152,14 +94,12 @@ def run(audio_path, out_dir = None, out_name = None):
             u.append([])
         u[-1].append(t[i])
 
-    # 1. Collect chunk audio tensors first (using raw integer sample indices)
-    chunk_audio_tensors = []
-    for i in range(len(u)):
-        chunk_audio_tensors.append(collect_chunks(u[i], wav))
+    # Cat audio theo chi so mau truoc, sau do moi doi u sang giay.
+    chunk_audio_tensors = [collect_chunks(u[i], wav) for i in range(len(u))]
 
     os.remove("vad_chunks/silero_temp.wav")
 
-    # 2. Now convert sample indices in u to float seconds for SRT time offset calculation
+    # chunk_start/chunk_end: vi tri trong audio da ghep; offset: cong vao de ve thoi gian goc.
     for i in range(len(u)):
         time_sec = 0.0
         offset = 0.0
@@ -188,20 +128,7 @@ def run(audio_path, out_dir = None, out_name = None):
     ]
 
     for i in tqdm(range(len(u))):
-        for x in range(max_attempts):
-            chunk_audio_np = chunk_audio_tensors[i].numpy()
-            result = model_asr.transcribe(
-                chunk_audio_np,
-                **transcription_options,
-                **decoding_options,
-            )
-
-            if len(result["segments"]) == 0:
-                break
-            elif result["segments"][-1]["end"] < u[i][-1]["chunk_end"] + 10.0:
-                break
-            elif x+1 < max_attempts:
-                print("Retrying chunk", i)
+        result = model_asr.transcribe(chunk_audio_tensors[i].numpy(), **transcribe_options)
 
         for r in result["segments"]:
             if r["start"] > u[i][-1]["chunk_end"]:
@@ -256,6 +183,7 @@ def run(audio_path, out_dir = None, out_name = None):
     with open("segment_info.json", "w", encoding="utf8") as f:
         json.dump(segment_info, f, indent=4)
 
+    # Bo cue chi gom tieng dem (oh, hmm...); "thankyou"/"godbye"... chi bo khi dong truoc cung la rac.
     garbage_list = [
         "a", "aa", "ah", "ahh", "ha", "haa", "hah", "haha", "hahaha", "mmm",
         "mm", "m", "h", "o", "mh", "mmh", "hm", "hmm", "huh", "oh",

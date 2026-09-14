@@ -1,41 +1,23 @@
-# Hướng dẫn chạy Dịch Thô Phụ Đề bằng VinAI MBart
-
-Thư mục này chứa script chạy mô hình dịch **VinAI MBart** (`vinai-translate-en2vi-v2`) để dịch thô toàn bộ file phụ đề `.srt` từ tiếng Anh sang tiếng Việt.
-
----
-
-## 📂 Các file trong thư mục
-* [run_nmt.py](file:///data/ndloc_bk/ntVan/demo/NMT/run_nmt.py): Script Python chính nạp mô hình dịch và dịch file phụ đề.
-* [README.md](file:///data/ndloc_bk/ntVan/demo/NMT/README.md): File hướng dẫn này.
-
----
-
-## ⚙️ Cấu hình Môi trường chạy
-Script yêu cầu sử dụng môi trường python chuyên biệt đã cài đặt đầy đủ PyTorch, Transformers và các gói xử lý phụ đề:
-* **Đường dẫn Python Virtualenv**: `/data/ndloc_bk/ntVan/demo_env/bin/python3`
-
----
-
-## 🚀 Cách chạy Script
-
-Sử dụng lệnh sau để chạy dịch thô:
+# NMT: mBART (VinAI en2vi) → SRT tiếng Việt thô
 
 ```bash
-/data/ndloc_bk/ntVan/demo_env/bin/python3 /data/ndloc_bk/ntVan/demo/NMT/run_nmt.py \
-    --input_srt /ĐƯỜNG_DẪN/file_tieng_anh.srt \
-    --output_srt /ĐƯỜNG_DẪN/file_tieng_viet_dich_tho.srt \
-    --batch_size 64
+/data/ndloc_bk/ntVan/demo_env/bin/python3 demo/NMT/run_nmt.py \
+    --input_srt "phim.(Tiếng Anh).srt" --output_srt "phim.(Tiếng Việt_dich_tho).srt" \
+    --num_beams 5 --length_penalty 4.0        # = cấu hình của run_pipeline.py
 ```
 
-### 📋 Các tham số dòng lệnh (Arguments)
+| Tham số | Mặc định | Ghi chú |
+| :--- | :--- | :--- |
+| `--input_srt`, `--output_srt` | bắt buộc | |
+| `--model_path` | `demo/model/NMT/mbart_model` nếu có, không thì `vinai/vinai-translate-en2vi-v2` | |
+| `--cache_dir` | `/data/ndloc_bk/ntVan/hf_cache` | |
+| `--batch_size` | `64` | |
+| `--num_beams` | `1` | pipeline dùng 5 |
+| `--length_penalty` | `1.0` | pipeline dùng 4.0 (qua cổng G2) |
+| `--mbr`, `--mbr_top_p`, `--seed` | `0`, `0.9`, `0` | MBR thí nghiệm, mặc định tắt |
+| `--device` | `cuda` nếu có | |
 
-| Tham số | Kiểu | Mặc định | Mô tả |
-| :--- | :--- | :--- | :--- |
-| `--input_srt` | `str` | *Bắt buộc* | Đường dẫn file phụ đề `.srt` tiếng Anh đầu vào. |
-| `--output_srt` | `str` | *Bắt buộc* | Đường dẫn lưu file phụ đề `.srt` tiếng Việt đầu ra. |
-| `--model_path` | `str` | Tự động dò tìm | Đường dẫn thư mục chứa model MBart cục bộ (dò tìm `/data/ndloc_bk/ntVan/infer/model/mbart_model` hoặc `/data/ndloc_bk/app/model/mbart_model`), nếu không thấy sẽ tự tải từ HF: `vinai/vinai-translate-en2vi-v2`. |
-| `--cache_dir` | `str` | `/data/ndloc_bk/ntVan/hf_cache` | Thư mục cache lưu trữ các mô hình HuggingFace. |
-| `--batch_size` | `int` | `64` | Kích thước batch khi thực hiện dịch qua model. |
-| `--device` | `str` | cuda (nếu có) | Thiết bị phần cứng để chạy dịch (`cuda` hoặc `cpu`). |
+Mỗi cue được tách câu (`nltk.sent_tokenize`), dịch từng câu rồi nối lại. `early_stopping=True` là bắt buộc
+khi `length_penalty > 1` (bỏ đi thì beam lặp chữ).
 
-
+Kiểm tra không cần GPU: `python demo/NMT/test_run_nmt_lp.py`. `run_gemmax2.py` là arm GemmaX2 để so sánh.
