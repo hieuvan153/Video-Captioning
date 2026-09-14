@@ -50,20 +50,42 @@ def test_repetition_already_in_rough_is_not_degenerate():
     assert not is_degenerate(song, song + ["Tất cả dấu hiệu nguy hiểm"])
 
 
-def test_short_rough_line_needs_closer_match():
-    """Dong tho ngan ('Không.') gan duoc voi dong rac chi vi ty le giong 0,21 >= 0,2."""
+def test_short_line_threshold_is_opt_in_for_v7():
+    """v7 (--system_prompt): dong tho ngan 'Không.' gan nham dong rac '- Tôi. - Tôi.' vi ty le giong 0,21 >= 0,2."""
+    from refine_post import ALIGN_MIN_RATIO_SHORT, align_lines
+    assert align_lines(["Không."], ["- Tôi. - Tôi."], short_tau=ALIGN_MIN_RATIO_SHORT) == [None]
+    assert align_lines(["Không."], ["Không!"], short_tau=ALIGN_MIN_RATIO_SHORT) == ["Không!"]
+
+
+def test_short_line_threshold_off_by_default():
+    """Adapter mac dinh: nguong 0,5 cho moi dong ngan dua 31 cue ve ban tho, neo cue -0,06 BLEU so voi pm0.90 (14/09).
+    Cue 43 Ode to Joy: pm0.90 giu 'Tôi có.' cho ban tho 'Đúng vậy.'."""
     from refine_post import align_lines
-    assert align_lines(["Không."], ["- Tôi. - Tôi."]) == [None]
-    assert align_lines(["Không."], ["Không!"]) == ["Không!"]
+    assert align_lines(["Đúng vậy."], ["Tôi có."]) == ["Tôi có."]
 
 
 def test_cap_chunks_splits_long_runs_evenly():
-    from refine_post import cap_chunks, chunk_by_gap
+    from refine_post import cap_chunks
     out = cap_chunks([list(range(45)), [45, 46]], 20)
     assert [len(c) for c in out] == [15, 15, 15, 2] and sum(out, []) == list(range(47))
+
+
+def _subs_without_silence(n):
     T = lambda s: dt.timedelta(seconds=s)
-    subs = [srt.Subtitle(i + 1, T(i), T(i + 0.9), "x") for i in range(50)]  # khong co khoang lang
-    assert max(len(c["indices"]) for c in chunk_by_gap(subs, 2.0, 20)) <= 20
+    return [srt.Subtitle(i + 1, T(i), T(i + 0.9), "x") for i in range(n)]
+
+
+def test_scene_of_91_cues_is_kept_whole():
+    """Tran 30 cue cat canh 91 cue cua Ode to Joy: -0,50 BLEU 4.7 / -0,025 PronF1 so voi pm0.90 (14/09).
+    Canh do chi can ~897 token dau ra < max_new_tokens 1024; unsloth khong cat prompt Gemma-3 dai hon max_seq_length."""
+    from refine_post import MAX_CHUNK_CUES, cap_chunks
+    assert cap_chunks([list(range(91))], MAX_CHUNK_CUES) == [list(range(91))]
+
+
+def test_gap_chunks_split_only_beyond_output_budget():
+    from refine_post import chunk_by_gap
+    assert [len(c["indices"]) for c in chunk_by_gap(_subs_without_silence(91))] == [91]
+    assert [len(c["indices"]) for c in chunk_by_gap(_subs_without_silence(150))] == [75, 75]
 
 
 def test_lock_len_catches_merged_lines():

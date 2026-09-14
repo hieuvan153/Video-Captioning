@@ -20,8 +20,8 @@ from unsloth import FastLanguageModel  # phai import truoc transformers
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from refine_post import (  # noqa: E402
-    align_lines, assign_scenes, cap_chunks, chunk_by_gap, drop_truncated_tail, is_degenerate,
-    build_system_prompt, lock_len, strip_numbering, write_srt,
+    ALIGN_MIN_RATIO_SHORT, MAX_CHUNK_CUES, align_lines, assign_scenes, cap_chunks, chunk_by_gap, drop_truncated_tail,
+    is_degenerate, build_system_prompt, lock_len, strip_numbering, write_srt,
 )
 
 
@@ -49,8 +49,8 @@ def parse_args():
                         help="Cat chunk khi khoang lang giua hai cue vuot nguong nay (giay).")
     parser.add_argument("--chunk_target", type=int, default=20,
                         help="Gop cac manh lien tiep cho toi khi dat co nay (so cue).")
-    parser.add_argument("--max_chunk_cues", type=int, default=30,
-                        help="Tran so cue moi canh VLM (p95 du lieu train ~31; canh 91 cue vuot max_seq_length).")
+    parser.add_argument("--max_chunk_cues", type=int, default=MAX_CHUNK_CUES,
+                        help="Tran so cue moi chunk de dau ra lot max_new_tokens (canh 91 cue ~897 token); nho hon thi mat ngu canh.")
     parser.add_argument("--output_srt",type=str, required=True)
     parser.add_argument("--adapter_model_name", type=str, default="thevan2404/best_gemma_scene_context")
     parser.add_argument("--system_prompt", type=str, default=None,
@@ -82,7 +82,7 @@ def refine_subtitles(
     system_prompt=None,
     chunk_gap_s=2.0,
     chunk_target=20,
-    max_chunk_cues=30
+    max_chunk_cues=MAX_CHUNK_CUES
 ):
     if cache_dir is None:
         cache_dir = os.path.join(ROOT_DIR, "cache")
@@ -106,7 +106,7 @@ def refine_subtitles(
     if not vlm_json_path or vlm_json_path.lower() == "none":
         print(f"Khong co VLM caption -> chia chunk theo khoang lang "
               f"(gap>{chunk_gap_s}s, gop toi {chunk_target} cue).", flush=True)
-        scenes_data = chunk_by_gap(en_subs, chunk_gap_s, chunk_target)
+        scenes_data = chunk_by_gap(en_subs, chunk_gap_s, chunk_target, max_chunk_cues)
     else:
         print(f"Reading scene captions: {vlm_json_path}")
         with open(vlm_json_path, "r", encoding="utf-8") as f:
@@ -239,7 +239,8 @@ def refine_subtitles(
 
             # LUON giong bang QHD, khong anh xa theo vi tri: LLM vua tach vua gop dong thi so dong
             # van bang nhau ma cac cue o giua truot 1 buoc (09/09: 30 cue).
-            aligned = align_lines(rough, lines_out)
+            # Nguong dong ngan chi cho adapter v7 (--system_prompt); adapter mac dinh bat thi -0,06 BLEU (14/09).
+            aligned = align_lines(rough, lines_out, short_tau=ALIGN_MIN_RATIO_SHORT if system_prompt else None)
             locked = lock_len(rough, aligned)
             n_src, n_kept = len(rough), sum(v is not None for v in aligned)
             if len(lines_out) != n_src or n_kept != n_src:

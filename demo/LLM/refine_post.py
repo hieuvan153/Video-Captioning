@@ -8,9 +8,13 @@ import srt
 
 # Diem mot cap (dong LLM, cue) = ty le giong - nguong; cap duoi nguong khong duoc gan. Quet 09/09 chon 0.20.
 ALIGN_MIN_RATIO = 0.20
-# Dong tho ngan (< SHORT_WORDS tu) can giong hon: "Không." vs "- Tôi. - Tôi." dat 0,21 >= 0,20 (v7, 24 cue rac).
+# Nguong rieng cho dong tho ngan (< SHORT_WORDS tu), CHI bat cho adapter v7 (--system_prompt): "Không." vs "- Tôi. - Tôi."
+# dat 0,21 >= 0,20 (24 cue rac). Bat cho adapter mac dinh thi 31 cue ngan ve ban tho: neo cue -0,06 BLEU so voi pm0.90 (14/09).
 ALIGN_MIN_RATIO_SHORT = 0.50
 SHORT_WORDS = 4
+# Tran cue moi chunk: dau ra ~10 token/cue phai lot max_new_tokens 1024 (canh 91 cue cua Ode to Joy ~897 token); unsloth khong
+# cat prompt Gemma-3 dai hon max_seq_length. Tran 30 cat canh lam mat ngu canh xung ho: -0,50 BLEU 4.7 / -0,025 PronF1 (14/09).
+MAX_CHUNK_CUES = 100
 # Khoa do dai: dong tinh chinh ngan hon LEN_LOCK_RATIO x ban tho (so tu) chi duoc chuyen phan sua dai tu.
 LEN_LOCK_RATIO = 0.90
 # Dong LLM giong CAP cue ke nhau hon cue duoc gan it nhat chung nay -> la dong gop hai cue.
@@ -22,15 +26,15 @@ _PRON_TOK = set("anh chị em ông bà cô cậu mày tao tôi mình ta bạn h�
 _NUM = re.compile(r"^(\d+)[.)]\s+")
 
 
-def align_lines(rough, out_lines, tau=ALIGN_MIN_RATIO):
+def align_lines(rough, out_lines, tau=ALIGN_MIN_RATIO, short_tau=None):
     """Gioi m dong LLM vao n cue theo THU TU bang QHD: bo qua cue (giu ban tho), BO dong LLM, hoac gan.
-    Tra ve list dai len(rough): out_lines[j] hoac None."""
+    short_tau: nguong cho dong tho ngan (None = dung tau). Tra ve list dai len(rough): out_lines[j] hoac None."""
     n, m = len(rough), len(out_lines)
     NEG = float("-inf")
     dp = [[NEG] * (m + 1) for _ in range(n + 1)]
     bt = [[None] * (m + 1) for _ in range(n + 1)]
     dp[0][0] = 0.0
-    taus = [ALIGN_MIN_RATIO_SHORT if len(r.split()) < SHORT_WORDS else tau for r in rough]
+    taus = [short_tau if short_tau is not None and len(r.split()) < SHORT_WORDS else tau for r in rough]
     for i in range(n + 1):
         for j in range(m + 1):
             if dp[i][j] == NEG:
@@ -114,7 +118,7 @@ def is_degenerate(lines, rough):
 
 
 def cap_chunks(chunks, target):
-    """Chia chunk dai hon target thanh cac manh gan bang nhau (prompt 91 cue vuot max_seq_length)."""
+    """Chia chunk dai hon target thanh cac manh gan bang nhau."""
     out = []
     for c in chunks:
         if not c:
@@ -125,9 +129,9 @@ def cap_chunks(chunks, target):
     return out
 
 
-def chunk_by_gap(subs, gap_s=2.0, target=20):
+def chunk_by_gap(subs, gap_s=2.0, target=20, max_cues=MAX_CHUNK_CUES):
     """Chia cue thanh chunk khong can VLM: cat o khoang lang > gap_s, gop manh lien tiep toi target cue,
-    doan khong co khoang lang dai hon target thi chia nho. Cung cau truc voi nhanh VLM (caption "None")."""
+    chi chia nho doan dai hon max_cues. Cung cau truc voi nhanh VLM (caption "None")."""
     if not subs:
         return []
     cuts = [0]
@@ -142,7 +146,7 @@ def chunk_by_gap(subs, gap_s=2.0, target=20):
         else:
             merged.append(pc)
     return [{"start_time": None, "end_time": None, "caption": "None", "indices": ix}
-            for ix in cap_chunks(merged, target)]
+            for ix in cap_chunks(merged, max_cues)]
 
 
 def find_best_scene(midpoint, scenes):
