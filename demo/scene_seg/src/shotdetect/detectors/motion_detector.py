@@ -62,11 +62,11 @@ class MotionDetector(shotDetector):
         # Value to return indiciating if a shot cut was found or not.
         cut_detected = False
 
-        frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame_grayscale = cv2.cvtColor(frame_img, cv2.COLOR_BGR2GRAY)
         masked_frame = self.bg_subtractor.apply(frame_grayscale)
 
         kernel = numpy.ones((self.kernel_size, self.kernel_size), numpy.uint8)
-        filtered_frame = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
+        filtered_frame = cv2.morphologyEx(masked_frame, cv2.MORPH_OPEN, kernel)
 
         frame_score = numpy.sum(filtered_frame) / float( 
             filtered_frame.shape[0] * filtered_frame.shape[1] )
