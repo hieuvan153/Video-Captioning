@@ -1,3 +1,4 @@
+import sys
 import torch
 torch.set_num_threads(4)
 import whisper
@@ -11,11 +12,13 @@ import json
 import tempfile
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from asr_post import VAD_SR, annotate_seconds, decode_env, group_regions, map_segment, segment_info_path  # noqa: E402
+_TEMPS, _BEAM = decode_env(os.environ)
 
 print("Running Whisper...")
 model_asr = whisper.load_model(os.path.join(ROOT_DIR, "model/ASR/whisper-medium-13-openai.pt"))
 
-VAD_SR = 16000
 vad_threshold = 0.2
 chunk_threshold = 3.0  # lang dai hon so giay nay thi tach chunk moi
 
@@ -23,8 +26,8 @@ chunk_threshold = 3.0  # lang dai hon so giay nay thi tach chunk moi
 transcribe_options = {
     "task": "transcribe",
     "language": "english",
-    "temperature": tuple(float(x) for x in os.environ.get("ASR_TEMPS", "0").split(",")),
-    "beam_size": int(os.environ["ASR_BEAM"]) if os.environ.get("ASR_BEAM") else None,
+    "temperature": _TEMPS,
+    "beam_size": _BEAM,
     "best_of": None,
     "patience": None,
     "length_penalty": None,
@@ -83,36 +86,13 @@ def run(audio_path, out_dir = None, out_name = None):
     t = get_speech_timestamps(wav, model, sampling_rate=VAD_SR, threshold=vad_threshold)
 
     # Dem 0,2 s dau / 1,3 s duoi (don vi mau) roi bo phan chong lan.
-    for i in range(len(t)):
-        t[i]["start"] = max(0, t[i]["start"] - 3200)
-        t[i]["end"] = min(wav.shape[0] - 16, t[i]["end"] + 20800)
-        if i > 0 and t[i]["start"] < t[i - 1]["end"]:
-            t[i]["start"] = t[i - 1]["end"]
-
-    u = [[]]
-    for i in range(len(t)):
-        if i > 0 and t[i]["start"] > t[i - 1]["end"] + (chunk_threshold * VAD_SR):
-            u.append([])
-        u[-1].append(t[i])
+    u = group_regions(t, wav.shape[0], chunk_threshold)
 
     # Cat audio theo chi so mau truoc, sau do moi doi u sang giay.
     chunk_audio_tensors = [collect_chunks(u[i], wav) for i in range(len(u))]
 
     # chunk_start/chunk_end: vi tri trong audio da ghep; offset: cong vao de ve thoi gian goc.
-    for i in range(len(u)):
-        time_sec = 0.0
-        offset = 0.0
-        for j in range(len(u[i])):
-            u[i][j]["start"] /= VAD_SR
-            u[i][j]["end"] /= VAD_SR
-            u[i][j]["chunk_start"] = time_sec
-            time_sec += u[i][j]["end"] - u[i][j]["start"]
-            u[i][j]["chunk_end"] = time_sec
-            if j == 0:
-                offset += u[i][j]["start"]
-            else:
-                offset += u[i][j]["start"] - u[i][j - 1]["end"]
-            u[i][j]["offset"] = offset
+    annotate_seconds(u)
 
     subs = []
     segment_info = []
@@ -149,25 +129,13 @@ def run(audio_path, out_dir = None, out_name = None):
             ):
                 continue
 
-            start = r["start"] + u[i][0]["offset"]
-            for j in range(len(u[i])):
-                if (
-                    r["start"] >= u[i][j]["chunk_start"]
-                    and r["start"] <= u[i][j]["chunk_end"]
-                ):
-                    start = r["start"] + u[i][j]["offset"]
-                    break
+            start, end = map_segment(u[i], r["start"], r["end"])
 
             if len(subs) > 0:
                 last_end = datetime.timedelta.total_seconds(subs[-1].end)
                 if last_end > start:
                     subs[-1].end = datetime.timedelta(seconds=start)
 
-            end = u[i][-1]["end"] + 0.5
-            for j in range(len(u[i])):
-                if r["end"] >= u[i][j]["chunk_start"] and r["end"] <= u[i][j]["chunk_end"]:
-                    end = r["end"] + u[i][j]["offset"]
-                    break
 
             subs.append(
                 srt.Subtitle(
@@ -179,7 +147,7 @@ def run(audio_path, out_dir = None, out_name = None):
             )
             sub_index += 1
 
-    with open("segment_info.json", "w", encoding="utf8") as f:
+    with open(segment_info_path(out_path), "w", encoding="utf8") as f:
         json.dump(segment_info, f, indent=4)
 
     # Bo cue chi gom tieng dem (oh, hmm...); "thankyou"/"godbye"... chi bo khi dong truoc cung la rac.

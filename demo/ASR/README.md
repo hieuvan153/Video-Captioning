@@ -21,10 +21,12 @@ Cách chạy:
 4. Đổi mốc từ audio đã ghép về trục thời gian gốc rồi ghi SRT.
 
 Lưu ý đã biết:
-- `segment_info.json` (chẩn đoán) ghi vào **thư mục đang đứng**, lần chạy sau ghi đè. WAV tạm nằm trong thư mục riêng của mỗi lần chạy.
+- Ngoài SRT còn ghi `<tên>.(Tiếng Anh).segment_info.json` (mọi segment trước khi lọc, kèm `seek`) cạnh SRT.
 - `whisper.load_model(<file .pt>)` không đặt `alignment_heads`, nên mốc từ dùng mọi head nửa trên decoder thay cho
   bộ head của medium.en. Mốc từ quyết định điểm seek và lưới cue; muốn đổi phải đo lại trên GPU.
 - `hallucination_silence_threshold=2.0` làm Whisper nhảy trọn 30 s khi từ cuối nằm trong 2 s cuối cửa sổ,
   nên mất từ ở đường nối cửa sổ. Muốn đổi phải đo lại trên GPU.
+
+Logic thuần (vùng VAD, ánh xạ thời gian, biến môi trường) nằm ở `asr_post.py`, test: `python demo/ASR/test_asr_post.py`.
 
 `asr_fw_infer.py` là arm faster-whisper đã loại (VAD và bộ lọc khác, không so trực tiếp với file chính được).

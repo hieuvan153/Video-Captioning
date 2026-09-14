@@ -1,5 +1,4 @@
 import os
-import re
 import gc
 import sys
 import time
@@ -170,8 +169,7 @@ def step5_run_nmt(english_srt_path, rough_srt_path, cache_dir):
         subtitles = list(srt.parse(f.read()))
 
     for sub in subtitles:
-        sub.content = " ".join(line.strip() for line in sub.content.splitlines() if line.strip())
-        sub.content = re.sub(r'\s+', ' ', sub.content).strip()
+        sub.content = run_nmt.clean_cue(sub.content)
 
     print("Translating subtitles...", flush=True)
     # beam5 + lp4.0 qua cong G2 tren Ode to Joy (08/09): chrF +1,26, COMET +0,0035 so voi greedy.
@@ -185,8 +183,7 @@ def step5_run_nmt(english_srt_path, rough_srt_path, cache_dir):
         length_penalty=4.0
     )
 
-    with open(rough_srt_path, "w", encoding="utf-8") as f:
-        f.write(srt.compose(translated_subs))
+    run_nmt.write_srt(translated_subs, rough_srt_path)
     print(f"Rough translation complete. Saved to: {rough_srt_path}", flush=True)
 
     print("Unloading NMT Model...", flush=True)

@@ -34,12 +34,15 @@ def load_model(model_id: str, device: str):
 
 
 def clean(gen: str) -> str:
-    """Lay dong dau tien co chu cua phan SINH RA (da cat prompt o muc token)."""
+    """Noi cac dong co chu cua phan SINH RA, dung o dong mo mot luot prompt moi (English: / Translate)."""
+    lines = []
     for line in gen.splitlines():
         line = re.sub(r"\s+", " ", line).strip()
+        if re.match(r"(English|Translate)\b", line):
+            break
         if line:
-            return line
-    return ""
+            lines.append(line)
+    return " ".join(lines)
 
 
 @torch.inference_mode()
@@ -50,8 +53,7 @@ def translate(texts: list[str], tok, model, device: str, batch: int, max_new_tok
     for b in range(0, len(todo), batch):
         idx = todo[b:b + batch]
         prompts = [PROMPT.format(text=texts[i]) for i in idx]
-        enc = tok(prompts, return_tensors="pt", padding=True, truncation=True,
-                  max_length=512).to(device)
+        enc = tok(prompts, return_tensors="pt", padding=True).to(device)
         gen = model.generate(**enc, do_sample=False, max_new_tokens=max_new_tokens,
                              use_cache=True, pad_token_id=tok.pad_token_id)
         new = gen[:, enc["input_ids"].shape[1]:]          # cat sach prompt theo token
@@ -88,7 +90,7 @@ def main() -> None:
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
     with open(a.output_srt, "w", encoding="utf-8") as f:
-        f.write(srt.compose(subs))
+        f.write(srt.compose(subs, reindex=False))
         f.flush()
         os.fsync(f.fileno())
 

@@ -17,6 +17,7 @@ for _pkg in ("punkt", "punkt_tab"):  # nltk >= 3.9 can punkt_tab cho sent_tokeni
         nltk.download(_pkg, quiet=True)
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TAG = re.compile(r"<[^>]+>")
 LOCAL_MBART = os.path.join(ROOT_DIR, "model/NMT/mbart_model")
 DEFAULT_MODEL = LOCAL_MBART if os.path.exists(LOCAL_MBART) else "vinai/vinai-translate-en2vi-v2"
 
@@ -63,13 +64,38 @@ def _selftest_mbr():
     print("selftest pick_mbr OK")
 
 
+def clean_cue(text):
+    """Noi cac dong cua cue thanh mot dong va bo the dinh dang (<i>, <font ...>) truoc khi dich."""
+    return re.sub(r"\s+", " ", TAG.sub("", text)).strip()
+
+
+def split_sentences(text):
+    """sent_tokenize, nhung manh chi gom dau cau ("Wait... what?!" -> ..., "what?", "!") gop vao cau truoc."""
+    out = []
+    for s in (x.strip() for x in sent_tokenize(text.strip())):
+        if not s:
+            continue
+        if out and not any(c.isalnum() for c in s):
+            out[-1] += s
+        else:
+            out.append(s)
+    return out
+
+
+def write_srt(subs, path):
+    """reindex=False: srt.compose mac dinh BO cue rong / dai 0 s va danh so lai -> lech luoi cue voi SRT EN."""
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(srt.compose(subs, reindex=False))
+
+
 def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64, num_beams=1,
                     length_penalty=1.0, mbr=0, mbr_top_p=0.9, seed=0):
     """Dich tung cau (sent_tokenize) cua moi cue roi noi lai; ghi de sub.content."""
     all_sentences = []
     mapping = []  # (start_idx, end_idx) cua cac cau thuoc moi cue
     for sub in en_subs:
-        sentences = [s for s in sent_tokenize(sub.content.strip()) if s.strip()]
+        sentences = split_sentences(sub.content)
         start_idx = len(all_sentences)
         all_sentences.extend(sentences)
         mapping.append((start_idx, len(all_sentences)))
@@ -81,6 +107,7 @@ def translate_en2vi(en_subs, model_en2vi, tokenizer_en2vi, device, batch_size=64
             batch,
             padding=True,
             truncation=True,
+            max_length=1024,  # model_max_length cua mBART la 1e30 -> khong co max_length thi khong cat
             return_tensors="pt"
         ).to(device)
 
@@ -130,8 +157,7 @@ def main():
     with open(args.input_srt, "r", encoding="utf-8") as f:
         subtitles = list(srt.parse(f.read()))
     for sub in subtitles:
-        sub.content = " ".join(line.strip() for line in sub.content.splitlines() if line.strip())
-        sub.content = re.sub(r'\s+', ' ', sub.content).strip()
+        sub.content = clean_cue(sub.content)
     print(f"Da load {len(subtitles)} phu de. Tai mo hinh {args.model_path} len {args.device}")
 
     tokenizer_en2vi = AutoTokenizer.from_pretrained(args.model_path, src_lang="en_XX", cache_dir=args.cache_dir)
@@ -156,9 +182,7 @@ def main():
     )
     print(f"Dich xong trong {time.time() - start_time:.2f} giay.")
 
-    os.makedirs(os.path.dirname(args.output_srt) or ".", exist_ok=True)
-    with open(args.output_srt, "w", encoding="utf-8") as f:
-        f.write(srt.compose(translated_subs))
+    write_srt(translated_subs, args.output_srt)
     print(f"Da luu: {args.output_srt}")
 
 
